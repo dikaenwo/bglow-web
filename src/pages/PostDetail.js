@@ -347,47 +347,50 @@ export function renderPostDetail(postId) {
     const text = commentInput.value.trim();
     if (!text || _sending) return;
     _sending = true;
-    const savedText = text;
+
+    const savedText  = text;
     const savedReplyTo = _replyTo;
+
     commentInput.value = '';
     sendBtn.style.opacity = '0.4';
     replyStrip.style.display = 'none';
     _replyTo = null;
 
     try {
-      const body_ = { content: savedText };
-      if (savedReplyTo) body_.parent_id = savedReplyTo.id;
+      const payload = { content: savedText };
+      if (savedReplyTo) payload.parent_id = savedReplyTo.id;
 
       const res = await fetch(`${API_BASE_URL}/api/posts/${postId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authH() },
-        body: JSON.stringify(body_)
+        body: JSON.stringify(payload)
       });
-      const c = await res.json();
-      if (!commentListEl) return;
 
+      const c = await res.json();
+      if (!res.ok) throw new Error(c.detail || `Server error ${res.status}`);
+
+      if (!commentListEl) return;
       commentListEl.querySelector('div[style*="text-align:center"]')?.remove();
 
       if (savedReplyTo) {
-        // Append reply inside parent comment's replies-container
         const parentEl = commentListEl.querySelector(`[data-comment-id="${savedReplyTo.id}"]`);
-        if (parentEl) {
-          const repliesContainer = parentEl.querySelector('.replies-container');
-          if (repliesContainer) {
-            repliesContainer.appendChild(buildCommentEl(c, { onReply, onLike, isReply: true }));
-            repliesContainer.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }
+        const container = parentEl?.querySelector('.replies-container');
+        if (container) {
+          container.appendChild(buildCommentEl(c, { onReply, onLike, isReply: true }));
+          container.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } else {
-          // fallback
           commentListEl.appendChild(buildCommentEl(c, { onReply, onLike }));
+          commentListEl.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       } else {
         commentListEl.appendChild(buildCommentEl(c, { onReply, onLike }));
         commentListEl.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     } catch (err) {
-      alert('Gagal mengirim komentar: ' + err.message);
+      // restore input on failure
       commentInput.value = savedText;
+      sendBtn.style.opacity = commentInput.value.trim() ? '1' : '0.4';
+      alert('Gagal kirim komentar: ' + err.message);
     } finally {
       _sending = false;
     }

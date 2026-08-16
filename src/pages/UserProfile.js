@@ -9,6 +9,15 @@ function getCurrentUserId() {
 }
 const authH = () => ({ Authorization: `Bearer ${getAuthToken()}` });
 
+// Parse image_url: single string OR JSON array "[...]"
+function parseImageUrls(imageUrl) {
+  if (!imageUrl) return [];
+  if (imageUrl.startsWith('[')) {
+    try { return JSON.parse(imageUrl).map(u => `${API_BASE_URL}${u}`); } catch { return []; }
+  }
+  return [`${API_BASE_URL}${imageUrl}`];
+}
+
 function timeAgo(iso) {
   if (!iso) return '';
   const d = Math.floor((Date.now() - new Date(iso)) / 1000);
@@ -210,9 +219,13 @@ export function renderUserProfile(userId) {
         item.addEventListener('mouseout',  () => item.style.background = '');
         item.addEventListener('click', () => { window.location.hash = `#/post/${p.id}`; });
 
-        const imageHtml = p.image_url ? `
-          <div style="margin:8px 0;border-radius:12px;overflow:hidden;max-height:200px">
-            <img src="${API_BASE_URL}${p.image_url}" style="width:100%;object-fit:cover;display:block;max-height:200px" loading="lazy" />
+        const postImgs = parseImageUrls(p.image_url);
+        const imageHtml = postImgs.length > 0 ? `
+          <div style="margin:8px 0;border-radius:12px;overflow:hidden">
+            ${postImgs.length === 1
+              ? `<img src="${postImgs[0]}" style="width:100%;object-fit:cover;display:block;max-height:220px;border-radius:12px" loading="lazy" />`
+              : `<div style="display:grid;grid-template-columns:repeat(${Math.min(postImgs.length,3)},1fr);gap:3px">${postImgs.slice(0,3).map(u => `<img src="${u}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block" loading="lazy" />`).join('')}</div>`
+            }
           </div>` : '';
 
         item.innerHTML = `

@@ -13,6 +13,15 @@ function getCurrentUserName() {
 
 const authH = () => ({ Authorization: `Bearer ${getAuthToken()}` });
 
+// Parse image_url: single string OR JSON array "[...]"
+function parseImageUrls(imageUrl) {
+  if (!imageUrl) return [];
+  if (imageUrl.startsWith('[')) {
+    try { return JSON.parse(imageUrl).map(u => `${API_BASE_URL}${u}`); } catch { return []; }
+  }
+  return [`${API_BASE_URL}${imageUrl}`];
+}
+
 function timeAgo(iso) {
   if (!iso) return '';
   const d = Math.floor((Date.now() - new Date(iso)) / 1000);
@@ -222,7 +231,7 @@ export function renderPostDetail(postId) {
       if (!res.ok) { body.innerHTML = '<div style="text-align:center;padding:40px;color:#65676b">Post tidak ditemukan</div>'; return; }
       const post = await res.json();
 
-      const images = post.image_url ? [`${API_BASE_URL}${post.image_url}`] : [];
+      const images = parseImageUrls(post.image_url);
       const imageHtml = images.length > 0 ? `
         <div style="display:flex;gap:3px;border-radius:14px;overflow:hidden;margin:8px 0 12px">
           ${images.map(url => `<div style="flex:1;aspect-ratio:1;max-height:220px;overflow:hidden;cursor:pointer" class="pd-img-thumb">

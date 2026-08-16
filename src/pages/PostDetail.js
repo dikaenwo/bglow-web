@@ -61,10 +61,13 @@ function buildCommentEl(c, { onReply, onLike, isReply = false }) {
 
   el.innerHTML = `
     <div style="width:${avatarSize}px;height:${avatarSize}px;border-radius:50%;
-      background:linear-gradient(135deg,#1877f2,#0ea5e9);
-      display:flex;align-items:center;justify-content:center;
+      background:${c.profile_photo ? 'none' : 'linear-gradient(135deg,#1877f2,#0ea5e9)'};
+      display:flex;align-items:center;justify-content:center;overflow:hidden;
       font-size:${isReply ? '11px' : '13px'};font-weight:700;color:#fff;flex-shrink:0">
-      ${initial(c.user_name)}
+      ${c.profile_photo
+        ? `<img src="${API_BASE_URL}${c.profile_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />`
+        : initial(c.user_name)
+      }
     </div>
     <div style="flex:1;min-width:0">
       <div style="background:#f0f2f5;border-radius:16px;padding:8px 13px;display:inline-block;max-width:100%">
@@ -162,8 +165,12 @@ export function renderPostDetail(postId) {
 
   const inputRow = document.createElement('div');
   inputRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px 24px';
+  const myUserId = (() => { try { return JSON.parse(localStorage.getItem('bglow_user') || '{}').id || ''; } catch { return ''; } })();
+  const myPhoto = localStorage.getItem('bglow_profile_photo_' + myUserId);
   inputRow.innerHTML = `
-    <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">${initial(myName)}</div>
+    <div style="width:34px;height:34px;border-radius:50%;background:${myPhoto ? 'none' : 'linear-gradient(135deg,#1877f2,#0ea5e9)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden">
+      ${myPhoto ? `<img src="${API_BASE_URL}${myPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>` : initial(myName)}
+    </div>
     <div style="flex:1;background:#f0f2f5;border-radius:22px;display:flex;align-items:center;padding:10px 14px;gap:8px">
       <input id="pd-comment-input" type="text" placeholder="Tulis komentar…" maxlength="500"
         style="flex:1;background:none;border:none;outline:none;font-size:14px;color:#050505;font-family:inherit" />
@@ -243,7 +250,12 @@ export function renderPostDetail(postId) {
       body.innerHTML = `
         <div style="background:#fff;padding:16px;margin-bottom:8px">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-            <div id="pd-avatar" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;cursor:pointer;flex-shrink:0">${initial(post.user_name)}</div>
+            <div id="pd-avatar" style="width:44px;height:44px;border-radius:50%;background:${post.profile_photo ? 'none' : 'linear-gradient(135deg,#1877f2,#0ea5e9)'};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;cursor:pointer;flex-shrink:0;overflow:hidden">
+              ${post.profile_photo
+                ? `<img src="${API_BASE_URL}${post.profile_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />`
+                : initial(post.user_name)
+              }
+            </div>
             <div style="flex:1">
               <div id="pd-author-name" style="font-size:15px;font-weight:700;color:#050505;cursor:pointer">${esc(post.user_name || 'Pengguna')}</div>
               <div style="display:flex;gap:6px;align-items:center;margin-top:2px">

@@ -156,10 +156,8 @@ export function renderUserProfile(userId) {
           <div style="padding:14px 16px">
             <div style="font-size:13px;font-weight:700;color:#65676b;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.3px">Skin Profile</div>
             <div style="display:flex;flex-wrap:wrap;gap:8px">
-              ${user.skin_type ? skinTypeBadge(user.skin_type) : ''}
-              ${user.acne_level ? problemChip(`Jerawat: ${esc(user.acne_level)}`) : ''}
-              ${user.oil_level  ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:4px 11px;border-radius:20px;background:#DBEAFE;color:#2563EB">${SKIN_TYPE_ICONS.Berminyak}Minyak: ${esc(user.oil_level)}</span>` : ''}
-              ${user.pore_condition ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:4px 11px;border-radius:20px;background:#F3E8FF;color:#7C3AED"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"><circle cx="12" cy="12" r="10" fill="#F3E8FF" stroke="#8B5CF6" stroke-width="1.5"/><circle cx="9" cy="9" r="2" fill="none" stroke="#8B5CF6" stroke-width="1"/><circle cx="15" cy="9" r="1.5" fill="none" stroke="#8B5CF6" stroke-width="1"/><circle cx="12" cy="15" r="2.5" fill="none" stroke="#8B5CF6" stroke-width="1"/></svg>Pori: ${esc(user.pore_condition)}</span>` : ''}
+              ${skinTypeBadge(user.skin_type)}
+              ${user.acne_level && user.acne_level !== 'Bersih' ? problemChip(`Jerawat: ${esc(user.acne_level)}`) : ''}
             </div>
           </div>` : ''}
         </div>

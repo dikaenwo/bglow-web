@@ -37,6 +37,8 @@ import { renderProductDetail } from './pages/ProductDetail.js';
 import { renderFavorites } from './pages/Favorites.js';
 import { renderScanHistory } from './pages/ScanHistory.js';
 import { renderFeed } from './pages/Feed.js';
+import { renderPostDetail } from './pages/PostDetail.js';
+import { renderUserProfile } from './pages/UserProfile.js';
 import { requestLocationWithPermission } from './utils/geolocation.js';
 import { registerAlarmServiceWorker } from './utils/alarm.js';
 
@@ -51,7 +53,7 @@ if (localStorage.getItem('bglow_auth') === '1') {
 }
 
 // ─── No-nav routes (intro, onboarding, auth) ───
-const noNavRoutes = ['intro', 'onboarding', 'login', 'register', 'subscription', 'product-detail', 'forgot-password'];
+const noNavRoutes = ['intro', 'onboarding', 'login', 'register', 'subscription', 'product-detail', 'forgot-password', 'post', 'user'];
 
 // ─── Route → tab mapping ───
 const tabMap = {
@@ -71,7 +73,9 @@ const tabMap = {
 
 function handleRoute() {
   const hash = window.location.hash.slice(2) || '';
-  const route = hash.split('?')[0];
+  const parts = hash.split('?')[0].split('/');
+  const route = parts[0];
+  const routeParam = parts[1] || null;
 
   // Auth & onboarding guard
   const isIntroSeen = localStorage.getItem('bglow_intro_seen');
@@ -128,6 +132,8 @@ function handleRoute() {
     case 'favorites': pageEl = renderFavorites(); break;
     case 'feed':        pageEl = renderFeed(); break;
     case 'scan-history': pageEl = renderScanHistory(); break;
+    case 'post': pageEl = renderPostDetail(routeParam); break;
+    case 'user': pageEl = renderUserProfile(routeParam); break;
     default: pageEl = renderHome(); break;
   }
 

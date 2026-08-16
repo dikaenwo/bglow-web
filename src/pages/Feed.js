@@ -621,13 +621,15 @@ function renderPostCard(post) {
     });
   }
 
-  // Click on post content/header to open detail
-  const clickTargets = [card.querySelector('.post-header'), card.querySelector('.post-content')];
+  // Click avatar/name → user profile page
+  const goToProfile = () => { if (post.user_id) window.location.hash = `#/user/${post.user_id}`; };
+  card.querySelector('.post-avatar')?.addEventListener('click', (e) => { e.stopPropagation(); goToProfile(); });
+  card.querySelector('.post-user-name')?.addEventListener('click', (e) => { e.stopPropagation(); goToProfile(); });
+
+  // Click post content/header area → post detail page
+  const clickTargets = [card.querySelector('.post-content')];
   clickTargets.forEach(el => {
-    if (el) el.addEventListener('click', (e) => {
-      if (e.target.closest('button') || e.target.closest('[data-action]')) return;
-      openPostDetail(post);
-    });
+    if (el) el.addEventListener('click', () => { window.location.hash = `#/post/${post.id}`; });
   });
 
   wrapper.appendChild(card);

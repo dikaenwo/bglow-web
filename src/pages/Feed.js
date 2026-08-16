@@ -63,8 +63,8 @@ let _page      = 1;
 let _hasMore   = true;
 let _isLoading = false;
 let _showModal = false;
-let _imageFile       = null;
-let _imagePreviewUrl = null;
+let _imageFiles   = [];   // Array<File>
+let _imagePreviews = []; // Array<string> (object URLs)
 let _submitting      = false;
 let _postListEl      = null;
 let _modalEl         = null;
@@ -175,9 +175,18 @@ function openLightbox(urls, startIndex = 0) {
 
 // ─── Post Detail Sheet ───────────────────────────────────────────────────────────────
 
+// Parse image_url: supports single string OR JSON array "[...]"
+function parseImageUrls(imageUrl) {
+  if (!imageUrl) return [];
+  if (imageUrl.startsWith('[')) {
+    try { return JSON.parse(imageUrl).map(u => `${API_BASE_URL}${u}`); } catch { return []; }
+  }
+  return [`${API_BASE_URL}${imageUrl}`];
+}
+
 function openPostDetail(post) {
   const myName = getCurrentUserName();
-  const images = post.image_url ? [`${API_BASE_URL}${post.image_url}`] : [];
+  const images = parseImageUrls(post.image_url);
 
   const overlay = document.createElement('div');
   overlay.className = 'post-detail-overlay';
@@ -500,7 +509,7 @@ function renderPostCard(post) {
   const card = document.createElement('div');
   card.className = 'post-card';
 
-  const images = post.image_url ? [`${API_BASE_URL}${post.image_url}`] : [];
+  const images = parseImageUrls(post.image_url);
   const MAX_VISIBLE = 3;
 
   const imageGridHtml = images.length > 0 ? `
@@ -725,10 +734,50 @@ function updateLoadMoreButton() {
 
 // ─── Create Post Modal ────────────────────────────────────────────────────────
 
+const MAX_IMAGES = 5;
+
+function renderImagePreviews(container, submitBtn, textarea) {
+  container.innerHTML = '';
+  if (_imagePreviews.length === 0) return;
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin:10px 0';
+  _imagePreviews.forEach((url, i) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#f0f2f5';
+    wrap.innerHTML = `
+      <img src="${url}" style="width:100%;height:100%;object-fit:cover" loading="lazy" />
+      <button data-idx="${i}" style="position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.55);border:none;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+    `;
+    wrap.querySelector('button').addEventListener('click', () => {
+      URL.revokeObjectURL(_imagePreviews[i]);
+      _imageFiles.splice(i, 1);
+      _imagePreviews.splice(i, 1);
+      renderImagePreviews(container, submitBtn, textarea);
+      updatePhotoLabel();
+      submitBtn.disabled = (!textarea.value.trim() && _imageFiles.length === 0) || _submitting;
+    });
+    grid.appendChild(wrap);
+  });
+  container.appendChild(grid);
+  if (_imagePreviews.length > 0) {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-size:11px;color:#65676b;text-align:right;margin-top:2px';
+    hint.textContent = `${_imagePreviews.length}/${MAX_IMAGES} foto`;
+    container.appendChild(hint);
+  }
+}
+
+function updatePhotoLabel() {
+  const label = document.getElementById('upload-photo-label');
+  if (label) label.style.opacity = _imageFiles.length >= MAX_IMAGES ? '0.4' : '1';
+  const input = document.getElementById('post-photo-input');
+  if (input) input.disabled = _imageFiles.length >= MAX_IMAGES;
+}
+
 function openModal() {
   if (_showModal) return;
   _showModal = true;
-  _imageFile = null; _imagePreviewUrl = null;
+  _imageFiles = []; _imagePreviews = [];
 
   _overlayEl = document.createElement('div');
   _overlayEl.className = 'modal-overlay';
@@ -745,8 +794,8 @@ function openModal() {
     <div class="char-count" id="char-count">0 / 1000</div>
     <div id="image-preview-container"></div>
     <div class="modal-actions">
-      <label class="upload-photo-btn" for="post-photo-input">${CAMERA_SVG} Foto</label>
-      <input type="file" id="post-photo-input" accept="image/*" style="display:none" />
+      <label id="upload-photo-label" class="upload-photo-btn" for="post-photo-input">${CAMERA_SVG} Foto</label>
+      <input type="file" id="post-photo-input" accept="image/*" multiple style="display:none" />
       <button class="post-submit-btn" id="post-submit-btn" disabled>Posting</button>
     </div>
   `;
@@ -760,31 +809,27 @@ function openModal() {
   const textarea  = document.getElementById('post-content');
   const charCount = document.getElementById('char-count');
   const submitBtn = document.getElementById('post-submit-btn');
+  const container = document.getElementById('image-preview-container');
 
   textarea.addEventListener('input', () => {
     const len = textarea.value.length;
     charCount.textContent = `${len} / 1000`;
     charCount.classList.toggle('near-limit', len > 850);
-    submitBtn.disabled = (!textarea.value.trim() && !_imageFile) || _submitting;
+    submitBtn.disabled = (!textarea.value.trim() && _imageFiles.length === 0) || _submitting;
   });
 
   document.getElementById('post-photo-input').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    _imageFile = file;
-    _imagePreviewUrl = URL.createObjectURL(file);
-    const container = document.getElementById('image-preview-container');
-    container.innerHTML = `
-      <div class="image-preview-wrap">
-        <img src="${_imagePreviewUrl}" class="post-image-preview" alt="preview" />
-        <button class="remove-image-btn" id="remove-img-btn">✕</button>
-      </div>
-    `;
-    document.getElementById('remove-img-btn').addEventListener('click', () => {
-      _imageFile = null; _imagePreviewUrl = null; container.innerHTML = '';
-      submitBtn.disabled = !textarea.value.trim() || _submitting;
+    const files = Array.from(e.target.files || []);
+    const remaining = MAX_IMAGES - _imageFiles.length;
+    const toAdd = files.slice(0, remaining);
+    toAdd.forEach(file => {
+      _imageFiles.push(file);
+      _imagePreviews.push(URL.createObjectURL(file));
     });
-    submitBtn.disabled = _submitting;
+    e.target.value = ''; // reset so same files can be re-selected
+    renderImagePreviews(container, submitBtn, textarea);
+    updatePhotoLabel();
+    submitBtn.disabled = (!textarea.value.trim() && _imageFiles.length === 0) || _submitting;
   });
 
   submitBtn.addEventListener('click', submitPost);
@@ -796,7 +841,8 @@ function closeModal() {
   _showModal = false;
   if (_overlayEl) _overlayEl.remove();
   _overlayEl = null; _modalEl = null;
-  if (_imagePreviewUrl) URL.revokeObjectURL(_imagePreviewUrl);
+  _imagePreviews.forEach(url => URL.revokeObjectURL(url));
+  _imageFiles = []; _imagePreviews = [];
 }
 
 async function submitPost() {
@@ -804,17 +850,26 @@ async function submitPost() {
   const textarea  = document.getElementById('post-content');
   const submitBtn = document.getElementById('post-submit-btn');
   const content   = textarea?.value.trim() || '';
-  if (!content && !_imageFile) return;
+  if (!content && _imageFiles.length === 0) return;
 
   _submitting = true;
-  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Memposting…'; }
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = `Memposting…`; }
 
   try {
     let imageUrl = null;
-    if (_imageFile) {
-      const r = await apiUploadImage(_imageFile);
-      imageUrl = r.image_url;
+    if (_imageFiles.length > 0) {
+      // Upload all images in parallel
+      submitBtn.textContent = `Upload foto (0/${_imageFiles.length})…`;
+      const uploadResults = [];
+      for (let i = 0; i < _imageFiles.length; i++) {
+        const r = await apiUploadImage(_imageFiles[i]);
+        uploadResults.push(r.image_url);
+        if (submitBtn) submitBtn.textContent = `Upload foto (${i+1}/${_imageFiles.length})…`;
+      }
+      // Store as JSON array if multiple, single string if one
+      imageUrl = uploadResults.length === 1 ? uploadResults[0] : JSON.stringify(uploadResults);
     }
+    if (submitBtn) submitBtn.textContent = 'Memposting…';
     const newPost = await apiCreatePost(content, imageUrl);
     newPost.like_count = 0; newPost.liked_by_me = false; newPost.comment_count = 0;
 
@@ -937,9 +992,14 @@ export async function renderMyPosts(containerEl) {
     gridEl.innerHTML = '';
     data.posts.forEach(p => {
       const thumb = document.createElement('div');
-      if (p.image_url) {
+      const thumbImgs = parseImageUrls(p.image_url);
+      if (thumbImgs.length > 0) {
         thumb.className = 'profile-post-thumb';
-        thumb.innerHTML = `<img src="${API_BASE_URL}${p.image_url}" loading="lazy" alt="post" />`;
+        thumb.innerHTML = `<img src="${thumbImgs[0]}" loading="lazy" alt="post" />`;
+        if (thumbImgs.length > 1) {
+          thumb.innerHTML += `<span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.55);color:#fff;font-size:10px;padding:2px 5px;border-radius:8px">${thumbImgs.length}</span>`;
+          thumb.style.position = 'relative';
+        }
       } else {
         thumb.className = 'profile-post-thumb-text';
         thumb.innerHTML = `<p>${escapeHtml(p.content || '')}</p>`;

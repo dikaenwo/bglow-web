@@ -232,11 +232,22 @@ export function renderPostDetail(postId) {
       const post = await res.json();
 
       const images = parseImageUrls(post.image_url);
+      // Carousel: show 1 image + swipe
+      const carouselId = 'pd-carousel-' + postId;
       const imageHtml = images.length > 0 ? `
-        <div style="display:flex;gap:3px;border-radius:14px;overflow:hidden;margin:8px 0 12px">
-          ${images.map(url => `<div style="flex:1;aspect-ratio:1;max-height:220px;overflow:hidden;cursor:pointer" class="pd-img-thumb">
-            <img src="${url}" style="width:100%;height:100%;object-fit:cover;display:block" loading="lazy" />
-          </div>`).join('')}
+        <div id="${carouselId}" style="position:relative;border-radius:14px;overflow:hidden;margin:8px 0 12px;background:#000;touch-action:pan-y">
+          <div class="pd-slides" style="display:flex;transition:transform 0.3s ease;will-change:transform">
+            ${images.map(url => `
+              <div style="min-width:100%;flex-shrink:0">
+                <img src="${url}" style="width:100%;max-height:340px;object-fit:contain;display:block;background:#111" loading="lazy" />
+              </div>`).join('')}
+          </div>
+          ${images.length > 1 ? `
+            <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:2">
+              ${images.map((_, i) => `<span class="pd-dot" data-i="${i}" style="width:6px;height:6px;border-radius:50%;background:${i === 0 ? '#fff' : 'rgba(255,255,255,0.45)'};transition:background 0.2s"></span>`).join('')}
+            </div>
+            <div style="position:absolute;top:8px;right:10px;background:rgba(0,0,0,0.45);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;z-index:2" class="pd-counter">1 / ${images.length}</div>
+          ` : ''}
         </div>` : '';
 
       body.innerHTML = `
@@ -282,17 +293,50 @@ export function renderPostDetail(postId) {
         </div>
       `;
 
-      // Lightbox
-      body.querySelectorAll('.pd-img-thumb').forEach((el, i) => {
-        el.addEventListener('click', () => {
+      // ── Touch Carousel Init ──
+      if (images.length > 1) {
+        const carouselEl = body.querySelector(`#${carouselId}`);
+        const slidesEl   = carouselEl?.querySelector('.pd-slides');
+        const dots       = carouselEl?.querySelectorAll('.pd-dot');
+        const counter    = carouselEl?.querySelector('.pd-counter');
+        if (carouselEl && slidesEl) {
+          let cur = 0;
+          const goTo = (idx) => {
+            cur = Math.max(0, Math.min(idx, images.length - 1));
+            slidesEl.style.transform = `translateX(-${cur * 100}%)`;
+            dots?.forEach((d, i) => d.style.background = i === cur ? '#fff' : 'rgba(255,255,255,0.45)');
+            if (counter) counter.textContent = `${cur + 1} / ${images.length}`;
+          };
+          // Touch
+          let tx0 = 0;
+          carouselEl.addEventListener('touchstart', e => { tx0 = e.touches[0].clientX; }, { passive: true });
+          carouselEl.addEventListener('touchend', e => {
+            const dx = e.changedTouches[0].clientX - tx0;
+            if (Math.abs(dx) > 40) goTo(cur + (dx < 0 ? 1 : -1));
+          }, { passive: true });
+          // Tap on image → fullscreen lightbox
+          carouselEl.querySelectorAll('img').forEach((img, i) => {
+            img.addEventListener('click', () => {
+              const lb = document.createElement('div');
+              lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;touch-action:pan-y';
+              lb.innerHTML = `<img src="${images[i]}" style="max-width:100vw;max-height:90vh;object-fit:contain" /><button style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer">✕</button>`;
+              lb.querySelector('button').addEventListener('click', () => lb.remove());
+              lb.addEventListener('click', e => { if (e.target === lb) lb.remove(); });
+              document.body.appendChild(lb);
+            });
+          });
+        }
+      } else if (images.length === 1) {
+        // Single image tap → fullscreen
+        body.querySelector(`#${carouselId} img`)?.addEventListener('click', () => {
           const lb = document.createElement('div');
-          lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center';
-          lb.innerHTML = `<img src="${images[i]}" style="max-width:100vw;max-height:85vh;object-fit:contain;border-radius:4px" /><button style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>`;
+          lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:center;justify-content:center';
+          lb.innerHTML = `<img src="${images[0]}" style="max-width:100vw;max-height:90vh;object-fit:contain" /><button style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer">✕</button>`;
           lb.querySelector('button').addEventListener('click', () => lb.remove());
           lb.addEventListener('click', e => { if (e.target === lb) lb.remove(); });
           document.body.appendChild(lb);
         });
-      });
+      }
 
       // Profile nav
       const goToProfile = () => { window.location.hash = `#/user/${post.user_id}`; };

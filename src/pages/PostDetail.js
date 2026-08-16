@@ -46,20 +46,20 @@ let _replyTo = null; // { id, user_name }
 
 // ── Build one comment element (with like + reply) ──
 function buildCommentEl(c, { onReply, onLike, isReply = false, topLevelId = null }) {
-  const el = document.createElement('div');
-  el.dataset.commentId = c.id;
-  el.style.cssText = `
-    display:flex; gap:8px;
-    margin-bottom:${isReply ? '10px' : '14px'};
-    ${isReply ? 'margin-left:42px;' : ''}
-    animation: feedSlideIn 0.22s ease;
-  `;
+  // Wrapper: for reply this is just the content row; replies-container sits outside
+  const wrapper = document.createElement('div');
+  wrapper.dataset.commentId = c.id;
+  wrapper.style.cssText = `margin-bottom:${isReply ? '8px' : '14px'}; animation: feedSlideIn 0.22s ease;`;
 
   const avatarSize = isReply ? 28 : 34;
   const nameFz    = isReply ? '12px' : '13px';
   const textFz    = isReply ? '13px' : '14px';
 
-  el.innerHTML = `
+  // ── Row: avatar + bubble ──
+  const row = document.createElement('div');
+  row.style.cssText = `display:flex; gap:8px; ${isReply ? 'margin-left:42px;' : ''}`;
+
+  row.innerHTML = `
     <div style="width:${avatarSize}px;height:${avatarSize}px;border-radius:50%;
       background:${c.profile_photo ? 'none' : 'linear-gradient(135deg,#1877f2,#0ea5e9)'};
       display:flex;align-items:center;justify-content:center;overflow:hidden;
@@ -94,31 +94,39 @@ function buildCommentEl(c, { onReply, onLike, isReply = false, topLevelId = null
           style="background:none;border:none;font-size:12px;font-weight:700;
             color:#65676b;cursor:pointer;padding:0">Balas</button>
       </div>
-      <div class="replies-container"></div>
     </div>
   `;
 
+  // ── Replies container — sits BELOW the row, indented 42px (avatar width + gap) ──
+  const repliesContainer = document.createElement('div');
+  repliesContainer.className = 'replies-container';
+  repliesContainer.style.cssText = isReply ? '' : 'margin-left:42px; margin-top:6px;';
+
+  wrapper.appendChild(row);
+  if (!isReply) wrapper.appendChild(repliesContainer);
+  else row.querySelector('div[style*="flex:1"]')?.after(repliesContainer); // replies of replies go inline
+
   // Like
-  const likeBtn = el.querySelector('.cl-like-btn');
+  const likeBtn = row.querySelector('.cl-like-btn');
   likeBtn?.addEventListener('click', () => onLike(c.id, likeBtn));
 
-  // Reply — if this is a reply, use its top-level parent id so nested replies stay in same thread
-  const replyBtn = el.querySelector('.cl-reply-btn');
+  // Reply — if this is a reply, pass top-level parent id so nesting stays flat
+  const replyBtn = row.querySelector('.cl-reply-btn');
   replyBtn?.addEventListener('click', () => {
     const replyParentId = isReply ? (topLevelId || c.id) : c.id;
     onReply({ id: replyParentId, user_name: c.user_name });
   });
 
-  // Render nested replies
+  // Render nested replies inside repliesContainer
   if (c.replies && c.replies.length > 0) {
-    const repliesContainer = el.querySelector('.replies-container');
     c.replies.forEach(r => {
       repliesContainer.appendChild(buildCommentEl(r, { onReply, onLike, isReply: true, topLevelId: c.id }));
     });
   }
 
-  return el;
+  return wrapper;
 }
+
 
 export function renderPostDetail(postId) {
   const page = document.createElement('div');

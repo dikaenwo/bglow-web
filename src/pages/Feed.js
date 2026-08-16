@@ -468,6 +468,7 @@ function buildCommentSection(postId, initialCount) {
 
     try {
       const comment = await apiAddComment(postId, text);
+      comment.created_at = new Date().toISOString(); // browser time → always "Baru saja"
       const listEl = section.querySelector(`#comment-list-${postId}`);
       // Remove empty state if present
       listEl.querySelector('.comments-empty')?.remove();
@@ -872,6 +873,7 @@ async function submitPost() {
     if (submitBtn) submitBtn.textContent = 'Memposting…';
     const newPost = await apiCreatePost(content, imageUrl);
     newPost.like_count = 0; newPost.liked_by_me = false; newPost.comment_count = 0;
+    newPost.created_at = new Date().toISOString(); // use browser time → always "Baru saja"
 
     closeModal();
     if (_postListEl) {

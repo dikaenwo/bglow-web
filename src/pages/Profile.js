@@ -25,7 +25,7 @@ function uploadOnlyAuthHeaders() {
 }
 async function doUploadFile(blob, filename = 'photo.jpg') {
   const fd = new FormData();
-  fd.append('file', blob, filename);
+  fd.append('image', blob, filename);
   const res = await fetch(`${API_BASE_URL}/api/upload/image`, {
     method: 'POST',
     headers: uploadOnlyAuthHeaders(),

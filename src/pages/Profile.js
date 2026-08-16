@@ -197,18 +197,32 @@ export function renderProfile() {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = `
     <!-- Banner -->
-    <div class="prof-banner">
+    <div class="prof-banner" id="prof-banner">
       <div class="prof-topbar">
         <div></div>
-        <button class="prof-topbar-btn" id="prof-hamburger">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
-            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-        </button>
+        <div style="display:flex;gap:8px">
+          <!-- Camera icon for cover photo -->
+          <label for="cover-upload" class="prof-topbar-btn" style="cursor:pointer" title="Ganti foto sampul">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#fff" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </label>
+          <input type="file" id="cover-upload" accept="image/*" style="display:none" />
+          <button class="prof-topbar-btn" id="prof-hamburger">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <!-- Avatar overlapping banner -->
       <div class="prof-avatar-wrap">
-        <div class="prof-avatar-circle" id="prof-avatar">${initial(userName)}</div>
+        <div style="position:relative;display:inline-block">
+          <div class="prof-avatar-circle" id="prof-avatar">${initial(userName)}</div>
+          <!-- Camera overlay on avatar -->
+          <label for="avatar-upload" style="position:absolute;bottom:2px;right:2px;width:26px;height:26px;border-radius:50%;background:#1877f2;border:2px solid #fff;display:flex;align-items:center;justify-content:center;cursor:pointer" title="Ganti foto profil">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="2.5"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </label>
+          <input type="file" id="avatar-upload" accept="image/*" style="display:none" />
+        </div>
       </div>
     </div>
 
@@ -255,6 +269,74 @@ export function renderProfile() {
   setTimeout(() => {
     page.querySelector('#prof-hamburger')?.addEventListener('click', openSettingsDrawer);
     page.querySelector('#prof-edit-btn')?.addEventListener('click', () => { window.location.hash = '#/settings'; });
+
+    // ── Photo upload helper ──
+    async function uploadPhoto(file, field) {
+      const toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1877f2;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.2)';
+      toast.textContent = 'Mengunggah foto…';
+      document.body.appendChild(toast);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const upRes = await fetch(`${API_BASE_URL}/api/upload/image`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: formData
+        });
+        if (!upRes.ok) throw new Error('Upload gagal');
+        const { image_url } = await upRes.json();
+
+        // Save to profile
+        const updateRes = await fetch(`${API_BASE_URL}/api/user/${userId}`, {
+          method: 'PUT',
+          headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [field]: image_url })
+        });
+        if (!updateRes.ok) throw new Error('Simpan gagal');
+
+        toast.textContent = '✓ Berhasil!';
+        toast.style.background = '#22c55e';
+        setTimeout(() => toast.remove(), 2000);
+        return image_url;
+      } catch(err) {
+        toast.textContent = '✗ ' + err.message;
+        toast.style.background = '#ef4444';
+        setTimeout(() => toast.remove(), 3000);
+        return null;
+      }
+    }
+
+    // Avatar upload
+    page.querySelector('#avatar-upload')?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const url = await uploadPhoto(file, 'profile_photo');
+      if (url) {
+        const avatarEl = page.querySelector('#prof-avatar');
+        if (avatarEl) {
+          avatarEl.style.background = 'none';
+          avatarEl.innerHTML = `<img src="${API_BASE_URL}${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />`;
+        }
+        localStorage.setItem('bglow_profile_photo_' + userId, url);
+      }
+      e.target.value = '';
+    });
+
+    // Cover photo upload
+    page.querySelector('#cover-upload')?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const url = await uploadPhoto(file, 'cover_photo');
+      if (url) {
+        const bannerEl = page.querySelector('#prof-banner');
+        if (bannerEl) {
+          bannerEl.style.background = `url(${API_BASE_URL}${url}) center/cover no-repeat`;
+        }
+        localStorage.setItem('bglow_cover_photo_' + userId, url);
+      }
+      e.target.value = '';
+    });
 
     // ── Tab logic ──
     const tabContent = page.querySelector('#prof-tab-content');
@@ -353,6 +435,18 @@ export function renderProfile() {
 
     // Load API stats
     if (userId && userId !== 'guest') {
+      // Show cached photos instantly
+      const cachedPhoto = localStorage.getItem('bglow_profile_photo_' + userId);
+      const cachedCover = localStorage.getItem('bglow_cover_photo_' + userId);
+      if (cachedPhoto) {
+        const av = page.querySelector('#prof-avatar');
+        if (av) { av.style.background = 'none'; av.innerHTML = `<img src="${API_BASE_URL}${cachedPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />`; }
+      }
+      if (cachedCover) {
+        const banner = page.querySelector('#prof-banner');
+        if (banner) banner.style.background = `url(${API_BASE_URL}${cachedCover}) center/cover no-repeat`;
+      }
+
       (async () => {
         try {
           const res = await fetch(`${API_BASE_URL}/api/users/${userId}/profile`, { headers: getAuthHeaders() });
@@ -368,8 +462,24 @@ export function renderProfile() {
           if (u.name) {
             const nameEl = page.querySelector('#prof-name');
             if (nameEl) nameEl.textContent = u.name;
+            // Only show initial if no photo
+            if (!u.profile_photo && !cachedPhoto) {
+              const av = page.querySelector('#prof-avatar');
+              if (av) av.textContent = u.name.charAt(0).toUpperCase();
+            }
+          }
+
+          // Apply profile photo from API
+          if (u.profile_photo) {
             const av = page.querySelector('#prof-avatar');
-            if (av) av.textContent = u.name.charAt(0).toUpperCase();
+            if (av) { av.style.background = 'none'; av.innerHTML = `<img src="${API_BASE_URL}${u.profile_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />`; }
+            localStorage.setItem('bglow_profile_photo_' + userId, u.profile_photo);
+          }
+          // Apply cover photo from API
+          if (u.cover_photo) {
+            const banner = page.querySelector('#prof-banner');
+            if (banner) banner.style.background = `url(${API_BASE_URL}${u.cover_photo}) center/cover no-repeat`;
+            localStorage.setItem('bglow_cover_photo_' + userId, u.cover_photo);
           }
 
           const badgesEl = page.querySelector('#prof-badges');

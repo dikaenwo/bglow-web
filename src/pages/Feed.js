@@ -209,7 +209,12 @@ function openPostDetail(post) {
     <div class="pds-body" id="pds-body">
       <div class="pds-post">
         <div class="post-header" style="margin-bottom:10px">
-          <div class="post-avatar">${avatarInitial(post.user_name)}</div>
+          <div class="post-avatar" style="${post.profile_photo ? 'background:none;padding:0;overflow:hidden' : ''}">
+            ${post.profile_photo
+              ? `<img src="${API_BASE_URL}${post.profile_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />`
+              : avatarInitial(post.user_name)
+            }
+          </div>
           <div class="post-user-info">
             <span class="post-user-name">${escapeHtml(post.user_name || 'Pengguna')}</span>
             <div class="post-meta">
@@ -534,7 +539,12 @@ function renderPostCard(post) {
 
   card.innerHTML = `
     <div class="post-header">
-      <div class="post-avatar">${avatarInitial(post.user_name)}</div>
+      <div class="post-avatar" style="${post.profile_photo ? 'background:none;padding:0;overflow:hidden' : ''}">
+        ${post.profile_photo
+          ? `<img src="${API_BASE_URL}${post.profile_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />`
+          : avatarInitial(post.user_name)
+        }
+      </div>
       <div class="post-user-info">
         <span class="post-user-name">${escapeHtml(post.user_name || 'Pengguna')}</span>
         <div class="post-meta">

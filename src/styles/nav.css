@@ -1,0 +1,106 @@
+/* ─── Bottom Navigation ─── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--max-width);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: var(--nav-height);
+  z-index: 100;
+  padding: 0 var(--space-sm);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast) var(--ease-smooth);
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-item svg {
+  width: 24px;
+  height: 24px;
+  stroke: var(--text-tertiary);
+  fill: none;
+  stroke-width: 1.8;
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.nav-item span {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.nav-item.active svg {
+  stroke: var(--primary);
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.3));
+}
+
+.nav-item.active span {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  background: var(--primary);
+  border-radius: 0 0 var(--radius-full) var(--radius-full);
+  animation: fadeIn var(--duration-fast) var(--ease-out);
+}
+
+.nav-item:active {
+  transform: scale(0.92);
+}
+
+/* Scan button (center) */
+.nav-item.scan-btn {
+  position: relative;
+}
+
+.nav-item.scan-btn .scan-icon-wrap {
+  width: 54px;
+  height: 54px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.35);
+  transition: all var(--duration-fast) var(--ease-smooth);
+  margin-top: -16px;
+}
+
+.nav-item.scan-btn .scan-icon-wrap svg,
+.nav-item.scan-btn .scan-icon-wrap img {
+  stroke: white;
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.nav-item.scan-btn:active .scan-icon-wrap {
+  transform: scale(0.9);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}

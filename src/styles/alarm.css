@@ -1,0 +1,437 @@
+/* ═══════════════════════════════════════════════
+   Sunscreen Alarm Styles
+   ═══════════════════════════════════════════════ */
+
+/* ─── UV Dashboard Card ─── */
+.uv-dashboard {
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 50%, #FCD34D 100%);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.uv-dashboard::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 120px;
+  height: 120px;
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: 50%;
+}
+
+/* Night Blue Theme for UV Dashboard */
+.uv-dashboard.night-theme {
+  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #3B82F6 100%);
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.2);
+}
+
+.uv-dashboard.night-theme::before {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.uv-dashboard.night-theme .uv-dash-header .uv-title {
+  color: #FFFFFF;
+}
+
+.uv-dashboard.night-theme .uv-dash-header .uv-date {
+  color: #BFDBFE;
+}
+
+.uv-dashboard.night-theme .uv-dash-header .uv-location {
+  color: #BFDBFE;
+}
+
+.uv-dashboard.night-theme .gauge-bg {
+  stroke: rgba(255, 255, 255, 0.2);
+}
+
+.uv-dashboard.night-theme .gauge-number {
+  color: #FFFFFF;
+}
+
+.uv-dashboard.night-theme .gauge-label {
+  color: #BFDBFE;
+}
+
+.uv-dashboard.night-theme .uv-level-desc {
+  color: #E0F2FE;
+}
+
+.uv-dash-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  gap: var(--space-sm);
+}
+
+.uv-dash-header .uv-title {
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: #78350F;
+}
+
+.uv-dash-header .uv-date {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: #A16207;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
+  margin-top: 2px;
+}
+
+.uv-dash-header .uv-location {
+  font-size: var(--font-xs);
+  color: #A16207;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  opacity: 0.85;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s ease;
+}
+
+.uv-dash-header .uv-location:hover {
+  opacity: 1;
+}
+
+
+.uv-gauge-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+}
+
+.uv-gauge {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+}
+
+.uv-gauge svg {
+  width: 100px;
+  height: 100px;
+  transform: rotate(-90deg);
+}
+
+.uv-gauge circle {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.uv-gauge .gauge-bg {
+  stroke: rgba(120, 53, 15, 0.15);
+}
+
+.uv-gauge .gauge-fill {
+  stroke: #D97706;
+  stroke-dasharray: 251;
+  stroke-dashoffset: 251;
+  transition: stroke-dashoffset 1.5s var(--ease-out);
+}
+
+.uv-gauge .gauge-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.uv-gauge .gauge-number {
+  font-size: var(--font-2xl);
+  font-weight: 800;
+  color: #78350F;
+}
+
+.uv-gauge .gauge-label {
+  font-size: 10px;
+  color: #A16207;
+  font-weight: 500;
+}
+
+.uv-info-right {
+  flex: 1;
+}
+
+.uv-level-text {
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: #78350F;
+  margin-bottom: 4px;
+}
+
+.uv-level-desc {
+  font-size: var(--font-sm);
+  color: #92400E;
+  line-height: 1.5;
+}
+
+/* Sun icon animation */
+.sun-animated {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--space-sm);
+}
+
+.sun-animated svg {
+  width: 40px;
+  height: 40px;
+  stroke: #D97706;
+  fill: none;
+  stroke-width: 2;
+  animation: sunPulse 2s ease-in-out infinite;
+}
+
+/* ─── Reminder Section ─── */
+.reminder-section {
+  margin-bottom: var(--space-lg);
+}
+
+.reminder-title {
+  font-size: var(--font-base);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.reminder-options {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.reminder-chip {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  text-align: center;
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all var(--duration-fast) var(--ease-smooth);
+  cursor: pointer;
+}
+
+.reminder-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.reminder-chip.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--text-inverse);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* ─── Timeline ─── */
+.alarm-timeline {
+  position: relative;
+  padding-left: 32px;
+}
+
+.alarm-timeline::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+
+.timeline-item {
+  position: relative;
+  padding-bottom: var(--space-lg);
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -25px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--border);
+  border: 2px solid var(--bg);
+  z-index: 1;
+}
+
+.timeline-item.done::before {
+  background: var(--success);
+}
+
+.timeline-item.current::before {
+  background: var(--primary);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.timeline-item.upcoming::before {
+  background: var(--border);
+}
+
+.tl-time {
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+/* ─── Timeline Interactive Checklist ─── */
+.tl-check-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  font-family: inherit;
+}
+
+.tl-check-btn.checked {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #86EFAC;
+}
+
+.tl-check-btn.unchecked {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+}
+
+.tl-check-btn.unchecked:hover {
+  background: #EFF6FF;
+  color: #2563EB;
+  border-color: #2563EB;
+}
+
+.tl-label {
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.tl-status {
+  font-size: var(--font-xs);
+  margin-top: 4px;
+}
+
+.tl-status.applied {
+  color: var(--success);
+}
+
+.tl-status.pending {
+  color: var(--warning);
+}
+
+/* ─── Active Alarm Card ─── */
+.active-alarm-card {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  color: white;
+  margin-top: var(--space-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.active-alarm-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 150px;
+  height: 150px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 50%;
+}
+
+.alarm-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.alarm-card-header svg {
+  width: 20px;
+  height: 20px;
+  stroke: white;
+  fill: none;
+  stroke-width: 2;
+}
+
+.alarm-card-header span {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.alarm-countdown {
+  font-size: var(--font-3xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.alarm-next-text {
+  font-size: var(--font-sm);
+  opacity: 0.8;
+  margin-top: var(--space-xs);
+}
+
+/* ─── Toast Notification ─── */
+.toast-notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  max-width: 360px;
+  width: calc(100% - 32px);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md) var(--space-lg);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  z-index: 200;
+  transition: transform 0.5s var(--ease-spring);
+}
+
+.toast-notification.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.toast-text {
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}

@@ -1,0 +1,375 @@
+/* ═══════════════════════════════════════════════
+   BPOM Product Checker Styles
+   ═══════════════════════════════════════════════ */
+
+/* ─── Scanner View ─── */
+.bpom-scanner {
+  position: relative;
+  width: 100%;
+  height: 350px;
+  background: #0a0a0a;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scanner-feed {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.barcode-frame {
+  width: 220px;
+  height: 220px;
+  border: 2px solid rgba(59, 130, 246, 0.5);
+  border-radius: var(--radius-md);
+  position: relative;
+}
+
+.barcode-frame::before,
+.barcode-frame::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: var(--primary);
+  border-style: solid;
+}
+
+.barcode-frame::before {
+  top: -2px; left: -2px;
+  border-width: 3px 0 0 3px;
+  border-radius: 4px 0 0 0;
+}
+
+.barcode-frame::after {
+  bottom: -2px; right: -2px;
+  border-width: 0 3px 3px 0;
+  border-radius: 0 0 4px 0;
+}
+
+.barcode-corner-tr, .barcode-corner-bl {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: var(--primary);
+  border-style: solid;
+}
+
+.barcode-corner-tr {
+  top: -2px; right: -2px;
+  border-width: 3px 3px 0 0;
+  border-radius: 0 4px 0 0;
+}
+
+.barcode-corner-bl {
+  bottom: -2px; left: -2px;
+  border-width: 0 0 3px 3px;
+  border-radius: 0 0 0 4px;
+}
+
+/* Blue laser line */
+.laser-line {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary), var(--secondary), var(--primary), transparent);
+  box-shadow: 0 0 12px var(--primary), 0 0 25px rgba(59, 130, 246, 0.3);
+  animation: scanLaser 2.5s ease-in-out infinite;
+}
+
+/* Barcode mock graphic */
+.barcode-graphic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 20px;
+  opacity: 0.3;
+}
+
+.barcode-bar {
+  width: 2px;
+  background: white;
+  border-radius: 1px;
+}
+
+.scanner-label {
+  position: absolute;
+  bottom: var(--space-lg);
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: rgba(255,255,255,0.7);
+  font-size: var(--font-sm);
+}
+
+/* ─── Search Section ─── */
+.bpom-search {
+  padding: var(--space-lg);
+}
+
+.search-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  color: var(--text-tertiary);
+  font-size: var(--font-sm);
+}
+
+.search-divider::before,
+.search-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--bg-soft);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px var(--space-md);
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.search-input-wrap:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-input-wrap svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--text-tertiary);
+  fill: none;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+.search-input-wrap input {
+  flex: 1;
+  border: none;
+  background: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: var(--font-base);
+}
+
+.search-input-wrap input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ─── Loading ─── */
+.bpom-loading {
+  padding: var(--space-xl) var(--space-lg);
+  text-align: center;
+}
+
+.bpom-loading p {
+  color: var(--text-tertiary);
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.skeleton-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.skeleton-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+}
+
+.skeleton-card .sk-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+}
+
+.skeleton-card .sk-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-card .sk-line {
+  height: 12px;
+  border-radius: 6px;
+}
+
+.skeleton-card .sk-line.w-80 { width: 80%; }
+.skeleton-card .sk-line.w-60 { width: 60%; }
+
+/* ─── Results ─── */
+.bpom-result {
+  padding: var(--space-lg);
+}
+
+.bpom-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.bpom-status-badge.registered {
+  background: var(--success-bg);
+  color: var(--success);
+  animation: bounceIn 0.5s var(--ease-spring);
+}
+
+.bpom-status-badge.registered svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--success);
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.bpom-status-badge.not-registered {
+  background: var(--danger-bg);
+  color: var(--danger);
+  animation: shake 0.5s ease-in-out;
+}
+
+.bpom-status-badge.not-registered svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--danger);
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.bpom-info-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.bpom-info-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md) var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+  opacity: 0;
+  animation: fadeInUp var(--duration-slow) var(--ease-out) forwards;
+}
+
+.bpom-info-card:nth-child(1) { animation-delay: 100ms; }
+.bpom-info-card:nth-child(2) { animation-delay: 200ms; }
+.bpom-info-card:nth-child(3) { animation-delay: 300ms; }
+.bpom-info-card:nth-child(4) { animation-delay: 400ms; }
+
+.bpom-info-card .info-label {
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.bpom-info-card .info-value {
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.bpom-search-btn {
+  width: 100%;
+  margin-top: var(--space-lg);
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  font-size: var(--font-base);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.bpom-search-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+/* ─── Recent Checks ─── */
+.recent-checks {
+  margin-top: var(--space-xl);
+}
+
+.recent-checks .section-title {
+  font-size: var(--font-base);
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+}
+
+.recent-item:last-child {
+  border-bottom: none;
+}
+
+.recent-item .ri-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recent-item .ri-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--text-tertiary);
+  fill: none;
+  stroke-width: 2;
+}
+
+.recent-item .ri-info {
+  flex: 1;
+}
+
+.recent-item .ri-name {
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.recent-item .ri-status {
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+}

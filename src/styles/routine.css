@@ -1,0 +1,787 @@
+/* ═══════════════════════════════════════════════
+   Skincare Routine Styles
+   ═══════════════════════════════════════════════ */
+
+/* ─── Streak Banner ─── */
+.streak-banner {
+  background: linear-gradient(135deg, #FF6B35, #F7931E);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  color: white;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.streak-banner::before {
+  content: '';
+  position: absolute;
+  top: -30%;
+  right: -10%;
+  width: 100px;
+  height: 100px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 50%;
+}
+
+.streak-fire {
+  font-size: 2rem;
+  animation: fireFlicker 1.5s ease-in-out infinite alternate;
+}
+
+.streak-fire.padam {
+  filter: grayscale(1) opacity(0.35);
+  animation: none;
+}
+
+
+@keyframes fireFlicker {
+  0% { transform: scale(1) rotate(-3deg); }
+  100% { transform: scale(1.15) rotate(3deg); }
+}
+
+.streak-info {
+  flex: 1;
+  min-width: 100px;
+}
+
+.streak-count {
+  font-size: var(--font-lg);
+  font-weight: 800;
+}
+
+.streak-sub {
+  font-size: var(--font-xs);
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.streak-dots {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.streak-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.streak-dot::before {
+  content: '';
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.1);
+  transition: all var(--duration-base) var(--ease-smooth);
+}
+
+.streak-dot.done::before {
+  display: none;
+}
+
+.sd-fire-icon {
+  width: 26px;
+  height: 26px;
+  margin-top: -4px;
+  margin-bottom: -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  animation: firePulse 2s infinite alternate;
+}
+
+@keyframes firePulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
+  100% { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); }
+}
+
+.streak-dot.today::before {
+  border-color: white;
+  animation: todayPulse 2s ease-in-out infinite;
+}
+
+@keyframes todayPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(255,255,255,0.2); }
+}
+
+.sd-label {
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.7;
+  text-transform: uppercase;
+}
+
+/* ─── Weekly Day Selector ─── */
+.week-selector {
+  display: flex;
+  gap: 4px;
+  margin-bottom: var(--space-md);
+  background: var(--bg-soft);
+  border-radius: var(--radius-xl);
+  padding: 4px;
+}
+
+.week-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 4px;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-xs);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  transition: all var(--duration-fast) var(--ease-smooth);
+  position: relative;
+}
+
+.week-day.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.week-day .wd-name {
+  font-weight: 600;
+}
+
+.week-day.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.week-day.is-today:not(.active) {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.week-day.is-today:not(.active)::after {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--primary);
+  position: absolute;
+  bottom: 4px;
+}
+
+.wd-special-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #F7931E;
+}
+
+.week-day.active .wd-special-dot {
+  background: white;
+}
+
+/* ─── Day Info Bar ─── */
+.day-info-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+  padding: 0 var(--space-xs);
+}
+
+.dib-day {
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.dib-special {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: #F7931E;
+  background: #FFF3E0;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.dib-special.dib-normal {
+  color: var(--text-tertiary);
+  background: var(--bg-soft);
+}
+
+/* ─── Special Step Card ─── */
+.routine-step.special-step {
+  border: 1.5px solid #F7931E40;
+  background: linear-gradient(135deg, #FFFBF0, var(--bg-card));
+}
+
+.special-star {
+  font-size: 0.7rem;
+  margin-left: 4px;
+  animation: starPulse 2s ease-in-out infinite;
+}
+
+@keyframes starPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+.routine-progress-card {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.routine-progress-card::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -15%;
+  width: 140px;
+  height: 140px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 50%;
+}
+
+.routine-ring {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.routine-ring svg {
+  width: 80px;
+  height: 80px;
+  transform: rotate(-90deg);
+}
+
+.routine-ring circle {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.routine-ring .rr-bg {
+  stroke: rgba(255,255,255,0.2);
+}
+
+.routine-ring .rr-fill {
+  stroke: white;
+  stroke-dasharray: 220;
+  stroke-dashoffset: 220;
+  transition: stroke-dashoffset 1s var(--ease-out);
+}
+
+.routine-ring .rr-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-xl);
+  font-weight: 800;
+}
+
+.routine-progress-info h3 {
+  font-size: var(--font-lg);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.routine-progress-info p {
+  font-size: var(--font-sm);
+  opacity: 0.8;
+}
+
+/* ─── Time Toggle ─── */
+.routine-toggle {
+  display: flex;
+  background: var(--bg-soft);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  margin-bottom: var(--space-lg);
+}
+
+.routine-toggle-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  transition: all var(--duration-fast) var(--ease-smooth);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+.routine-toggle-btn.active {
+  background: white;
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.routine-toggle-btn .toggle-icon-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+/* ─── Step Cards ─── */
+.routine-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  position: relative;
+  padding-left: 20px;
+}
+
+.routine-steps::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 28px;
+  bottom: 28px;
+  width: 2px;
+  background: var(--border);
+}
+
+.routine-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md) var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+  position: relative;
+  transition: all var(--duration-base) var(--ease-smooth);
+  opacity: 0;
+  animation: fadeInUp var(--duration-slow) var(--ease-out) forwards;
+}
+
+.routine-step:nth-child(1) { animation-delay: 80ms; }
+.routine-step:nth-child(2) { animation-delay: 160ms; }
+.routine-step:nth-child(3) { animation-delay: 240ms; }
+.routine-step:nth-child(4) { animation-delay: 320ms; }
+.routine-step:nth-child(5) { animation-delay: 400ms; }
+.routine-step:nth-child(6) { animation-delay: 480ms; }
+
+.routine-step::before {
+  content: '';
+  position: absolute;
+  left: -17px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--border);
+  border: 2px solid var(--bg);
+  z-index: 1;
+  transition: all var(--duration-base) var(--ease-smooth);
+}
+
+.routine-step.done::before {
+  background: var(--success);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.routine-step.done {
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.rs-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.rs-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.rs-info {
+  flex: 1;
+}
+
+.rs-info .rs-step-label {
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.rs-info .rs-product-name {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.rs-info .rs-product-brand {
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+}
+
+/* ─── Checkbox Options ─── */
+.rs-check {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--duration-base) var(--ease-bounce);
+  color: transparent;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.rs-check:active {
+  transform: scale(0.9);
+}
+
+.rs-check.checked {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+  transform: scale(1.05);
+}
+
+.rs-check svg {
+  width: 14px;
+  height: 14px;
+  stroke: transparent;
+  fill: none;
+  stroke-width: 3;
+  transition: stroke var(--duration-fast);
+}
+
+.rs-check.checked svg {
+  stroke: white;
+}
+
+/* ─── Add Step Button ─── */
+.add-step-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 2px dashed var(--border);
+  color: var(--text-tertiary);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.add-step-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--bg-overlay);
+}
+
+.add-step-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+/* ─── Add Step Modal ─── */
+.add-step-modal {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.step-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.step-type-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-light);
+  background: var(--bg-card);
+  transition: all var(--duration-fast) var(--ease-smooth);
+  cursor: pointer;
+}
+
+.step-type-chip:hover {
+  border-color: var(--primary-light);
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.step-type-chip.selected {
+  border-color: var(--primary);
+  background: rgba(59, 130, 246, 0.08);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.step-type-chip .stc-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--duration-fast) var(--ease-spring);
+}
+
+.step-type-chip:hover .stc-icon {
+  transform: translateY(-1px) scale(1.05);
+}
+
+.step-type-chip .stc-label {
+  font-size: var(--font-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.step-type-chip.selected .stc-label {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Extra step animation delays */
+.routine-step:nth-child(7) { animation-delay: 560ms; }
+.routine-step:nth-child(8) { animation-delay: 640ms; }
+.routine-step:nth-child(9) { animation-delay: 720ms; }
+.routine-step:nth-child(10) { animation-delay: 800ms; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+
+/* ─── Step Actions (check + delete) ─── */
+.rs-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.rs-delete {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  transition: all var(--duration-fast) var(--ease-smooth);
+  cursor: pointer;
+  opacity: 0.5;
+}
+
+.rs-delete:hover {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.08);
+  opacity: 1;
+}
+
+.rs-delete svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ─── Delete Confirmation Modal ─── */
+.delete-confirm-modal {
+  text-align: center;
+}
+
+.delete-confirm-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-sm);
+}
+
+.delete-confirm-text {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--space-lg);
+}
+
+.btn-danger {
+  background: #EF4444;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: var(--font-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.btn-danger:hover {
+  background: #DC2626;
+}
+
+/* ─── Fire Celebration Animation ─── */
+.fire-particle {
+  position: fixed;
+  bottom: -10vh;
+  font-size: 2rem;
+  animation: fireRise 2.5s ease-out forwards;
+  z-index: 1000;
+  pointer-events: none;
+  filter: drop-shadow(0 0 10px rgba(255, 107, 53, 0.8));
+}
+
+@keyframes fireRise {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  20% { opacity: 1; transform: translateY(-20vh) scale(1.2) translateX(10px); }
+  50% { transform: translateY(-50vh) scale(1) translateX(-10px); }
+  80% { opacity: 0.8; transform: translateY(-80vh) scale(0.8) translateX(5px); }
+  100% { transform: translateY(-110vh) scale(0.5); opacity: 0; }
+}
+
+/* ─── Add Special Step Modal Extensions ─── */
+.modal-subtitle {
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-md);
+  margin-top: -4px;
+}
+
+.time-picker-modal {
+  display: flex;
+  background: var(--bg-soft);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  margin-top: 6px;
+}
+
+.time-pick-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  transition: all var(--duration-fast);
+  cursor: pointer;
+}
+
+.time-pick-btn.active {
+  background: white;
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.day-picker {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.day-pick-chip {
+  padding: 8px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-light);
+  background: var(--bg-card);
+  font-size: var(--font-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all var(--duration-fast);
+  cursor: pointer;
+}
+
+.day-pick-chip.selected {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.insert-after-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.insert-pick-chip {
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: var(--bg-card);
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  transition: all var(--duration-fast);
+  cursor: pointer;
+}
+
+.insert-pick-chip.selected {
+  background: var(--bg-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ─── Action Group ─── */
+.routine-action-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+  margin-left: 20px;
+}
+
+.add-special-btn {
+  background: #FFFBF0;
+  color: #F7931E;
+  border-color: #F7931E40;
+}
+
+.add-special-btn:hover {
+  background: #FFF3E0;
+  border-color: #F7931E;
+  color: #EA580C;
+}

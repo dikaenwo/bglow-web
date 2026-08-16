@@ -676,10 +676,13 @@ function renderEmptyState() {
   if (!_postListEl) return;
   _postListEl.innerHTML = `
     <div class="feed-empty">
-      <div class="feed-empty-icon">💬</div>
-      <h3>Belum ada post</h3>
-      <p>Jadilah yang pertama berbagi tips & pengalaman skincare kamu!</p>
-      <button class="feed-empty-btn" id="feed-empty-post-btn">${PLUS_SVG} Buat Post Pertama</button>
+      <div class="feed-empty-icon" style="font-size:38px;margin-bottom:10px">💬</div>
+      <h3 style="font-size:15px;margin:0 0 6px">Belum ada post</h3>
+      <p style="font-size:13px;margin:0 0 16px;color:#65676b">Jadilah yang pertama berbagi tips &amp; pengalaman skincare!</p>
+      <button class="feed-empty-btn" id="feed-empty-post-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Buat Post
+      </button>
     </div>
   `;
   document.getElementById('feed-empty-post-btn')?.addEventListener('click', openModal);

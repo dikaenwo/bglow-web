@@ -567,17 +567,17 @@
 .feed-empty-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 26px;
+  gap: 6px;
+  padding: 9px 20px;
   border-radius: 50px;
   background: #1877f2;
   border: none;
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 14px rgba(24,119,242,0.3);
+  box-shadow: 0 3px 10px rgba(24,119,242,0.25);
 }
 
 .feed-empty-btn:hover { background: #1465d8; transform: translateY(-1px); }

@@ -218,8 +218,12 @@ function renderPostCard(p, isLiked = false) {
     </div>` : '';
   const card = document.createElement('div');
   card.style.cssText = 'display:flex;gap:10px;padding:14px 16px;border-bottom:1px solid #f0f2f5;background:#fff;cursor:pointer;transition:background 0.15s';
+  const userId = (() => { try { return JSON.parse(localStorage.getItem('bglow_user') || '{}').id || ''; } catch { return ''; } })();
+  const myPhoto = p.profile_photo || localStorage.getItem('bglow_profile_photo_' + userId);
   card.innerHTML = `
-    <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0">${av}</div>
+    <div style="width:40px;height:40px;border-radius:50%;background:${myPhoto ? 'none' : 'linear-gradient(135deg,#1877f2,#0ea5e9)'};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden">
+      ${myPhoto ? `<img src="${API_BASE_URL}${myPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>` : av}
+    </div>
     <div style="flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
         <span style="font-size:14px;font-weight:700;color:#050505">${esc(authorName)}</span>

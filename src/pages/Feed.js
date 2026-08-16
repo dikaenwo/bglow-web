@@ -397,9 +397,14 @@ function buildCommentSection(postId, initialCount) {
 
   const myName = getCurrentUserName();
 
+  const myUserId = (() => { try { return JSON.parse(localStorage.getItem('bglow_user') || '{}').id || ''; } catch { return ''; } })();
+  const myPhoto = localStorage.getItem('bglow_profile_photo_' + myUserId);
+
   section.innerHTML = `
     <div class="comment-input-row">
-      <div class="comment-avatar-sm">${avatarInitial(myName)}</div>
+      <div class="comment-avatar-sm" style="${myPhoto ? 'background:none;padding:0;overflow:hidden' : ''}">
+        ${myPhoto ? `<img src="${API_BASE_URL}${myPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>` : avatarInitial(myName)}
+      </div>
       <div class="comment-input-wrap">
         <input class="comment-input" id="comment-input-${postId}" type="text" placeholder="Tulis komentar…" maxlength="500" />
         <button class="comment-send-btn" id="comment-send-${postId}">${SEND_SVG}</button>
@@ -437,8 +442,11 @@ function buildCommentSection(postId, initialCount) {
   function renderCommentItem(c) {
     const item = document.createElement('div');
     item.className = 'comment-item';
+    const hasPhoto = c.profile_photo;
     item.innerHTML = `
-      <div class="comment-avatar-sm">${avatarInitial(c.user_name)}</div>
+      <div class="comment-avatar-sm" style="${hasPhoto ? 'background:none;padding:0;overflow:hidden' : ''}">
+        ${hasPhoto ? `<img src="${API_BASE_URL}${hasPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>` : avatarInitial(c.user_name)}
+      </div>
       <div>
         <div class="comment-bubble">
           <div class="comment-user-name">${escapeHtml(c.user_name || 'Pengguna')}</div>
@@ -473,7 +481,8 @@ function buildCommentSection(postId, initialCount) {
 
     try {
       const comment = await apiAddComment(postId, text);
-      comment.created_at = new Date().toISOString(); // browser time → always "Baru saja"
+      comment.created_at = new Date().toISOString();
+      comment.profile_photo = myPhoto || null; // inject for correct avatar
       const listEl = section.querySelector(`#comment-list-${postId}`);
       // Remove empty state if present
       listEl.querySelector('.comments-empty')?.remove();

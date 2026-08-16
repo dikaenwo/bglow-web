@@ -1,6 +1,5 @@
 import { getUserId, getAuthHeaders, isPremium } from '../utils/store.js';
 import { API_BASE_URL } from '../config.js';
-import { renderMyPosts } from './Feed.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
@@ -243,9 +242,12 @@ export function renderProfile() {
       <button class="prof-edit-btn" id="prof-edit-btn">Edit Profil</button>
     </div>
 
-    <!-- Posts section -->
-    <div class="prof-posts-header">📋 Postingan Saya</div>
-    <div id="prof-posts-container"></div>
+    <!-- Tabs -->
+    <div id="prof-tabs-bar" style="display:flex;background:#fff;border-bottom:1px solid #f0f2f5;margin-top:8px;position:sticky;top:0;z-index:5">
+      <button id="tab-posts" style="flex:1;padding:13px 0;border:none;background:none;font-size:14px;font-weight:700;cursor:pointer;color:#1877f2;border-bottom:3px solid #1877f2;transition:all 0.2s">Post</button>
+      <button id="tab-liked" style="flex:1;padding:13px 0;border:none;background:none;font-size:14px;font-weight:600;cursor:pointer;color:#65676b;border-bottom:3px solid transparent;transition:all 0.2s">Suka</button>
+    </div>
+    <div id="prof-tab-content"></div>
   `;
   page.appendChild(wrapper);
 
@@ -254,9 +256,100 @@ export function renderProfile() {
     page.querySelector('#prof-hamburger')?.addEventListener('click', openSettingsDrawer);
     page.querySelector('#prof-edit-btn')?.addEventListener('click', () => { window.location.hash = '#/settings'; });
 
-    // Load posts
-    const postsEl = page.querySelector('#prof-posts-container');
-    if (postsEl) renderMyPosts(postsEl);
+    // ── Tab logic ──
+    const tabContent = page.querySelector('#prof-tab-content');
+    const tabPosts   = page.querySelector('#tab-posts');
+    const tabLiked   = page.querySelector('#tab-liked');
+    let activeTab    = 'posts';
+
+    function timeAgo(iso) {
+      if (!iso) return '';
+      const d = Math.floor((Date.now() - new Date(iso)) / 1000);
+      if (d < 60) return 'Baru saja';
+      if (d < 3600) return `${Math.floor(d/60)} mnt lalu`;
+      if (d < 86400) return `${Math.floor(d/3600)} jam lalu`;
+      return `${Math.floor(d/86400)} hari lalu`;
+    }
+
+    function renderPostCard(p, isLiked = false) {
+      const imgs = parseImageUrls(p.image_url);
+      const authorName = p.user_name || 'Saya';
+      const av = (authorName).charAt(0).toUpperCase();
+      const imgHtml = imgs.length > 0 ? `
+        <div style="margin-top:10px;border-radius:12px;overflow:hidden;border:1px solid #f0f2f5">
+          ${imgs.length === 1
+            ? `<img src="${imgs[0]}" style="width:100%;max-height:280px;object-fit:cover;display:block" loading="lazy" />`
+            : `<div style="display:grid;grid-template-columns:repeat(${Math.min(imgs.length,3)},1fr);gap:2px">${imgs.slice(0,3).map(u=>`<img src="${u}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block" loading="lazy"/>`).join('')}</div>`
+          }
+        </div>` : '';
+
+      const card = document.createElement('div');
+      card.style.cssText = 'display:flex;gap:10px;padding:14px 16px;border-bottom:1px solid #f0f2f5;background:#fff;cursor:pointer;transition:background 0.15s';
+      card.innerHTML = `
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0">${av}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-size:14px;font-weight:700;color:#050505">${esc(authorName)}</span>
+            ${p.skin_type ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:#EFF6FF;color:#1D4ED8;font-weight:600">${esc(p.skin_type)}</span>` : ''}
+            <span style="font-size:12px;color:#65676b;margin-left:auto">${timeAgo(p.created_at)}</span>
+          </div>
+          ${p.content ? `<div style="font-size:14px;color:#050505;margin-top:5px;line-height:1.55;word-break:break-word;white-space:pre-wrap">${esc(p.content)}</div>` : ''}
+          ${imgHtml}
+          <div style="display:flex;gap:18px;margin-top:10px;color:#65676b;font-size:13px">
+            <span style="display:flex;align-items:center;gap:4px">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="${isLiked?'#e03131':'none'}" stroke="${isLiked?'#e03131':'#65676b'}" stroke-width="2"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+              ${p.like_count||0}
+            </span>
+            <span style="display:flex;align-items:center;gap:4px">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#65676b" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              ${p.comment_count||0}
+            </span>
+          </div>
+        </div>`;
+      card.addEventListener('mouseover', () => card.style.background = '#f9fafb');
+      card.addEventListener('mouseout',  () => card.style.background = '#fff');
+      card.addEventListener('click', () => { window.location.hash = `#/post/${p.id}`; });
+      return card;
+    }
+
+    async function loadTab(tab) {
+      tabContent.innerHTML = `<div style="text-align:center;padding:32px;color:#65676b;font-size:14px">Memuat…</div>`;
+      try {
+        const url = tab === 'posts'
+          ? `${API_BASE_URL}/api/users/me/posts`
+          : `${API_BASE_URL}/api/users/me/liked`;
+        const res = await fetch(url, { headers: getAuthHeaders() });
+        const data = await res.json();
+        const posts = data.posts || [];
+        tabContent.innerHTML = '';
+        if (posts.length === 0) {
+          tabContent.innerHTML = `<div style="text-align:center;padding:48px 20px;color:#65676b;font-size:14px">${tab==='posts'?'Belum ada postingan':'Belum ada post yang disukai'}</div>`;
+          return;
+        }
+        posts.forEach(p => tabContent.appendChild(renderPostCard(p, tab === 'liked')));
+
+        // Update post count stat
+        if (tab === 'posts') {
+          const pc = page.querySelector('#prof-post-count');
+          if (pc) pc.textContent = data.total ?? posts.length;
+        }
+      } catch { tabContent.innerHTML = `<div style="text-align:center;padding:32px;color:#e03131;font-size:13px">Gagal memuat postingan</div>`; }
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      tabPosts.style.color       = tab==='posts' ? '#1877f2' : '#65676b';
+      tabPosts.style.fontWeight  = tab==='posts' ? '700' : '600';
+      tabPosts.style.borderBottom= tab==='posts' ? '3px solid #1877f2' : '3px solid transparent';
+      tabLiked.style.color       = tab==='liked' ? '#1877f2' : '#65676b';
+      tabLiked.style.fontWeight  = tab==='liked' ? '700' : '600';
+      tabLiked.style.borderBottom= tab==='liked' ? '3px solid #1877f2' : '3px solid transparent';
+      loadTab(tab);
+    }
+
+    tabPosts?.addEventListener('click', () => switchTab('posts'));
+    tabLiked?.addEventListener('click', () => switchTab('liked'));
+    loadTab('posts'); // default
 
     // Load API stats
     if (userId && userId !== 'guest') {
@@ -266,48 +359,33 @@ export function renderProfile() {
           if (!res.ok) return;
           const data = await res.json();
 
-          // Post count
-          const pc = page.querySelector('#prof-post-count');
-          if (pc) pc.textContent = data.posts?.length ?? 0;
-
           const fc = page.querySelector('#prof-follower-count');
           const fw = page.querySelector('#prof-following-count');
           if (fc) fc.textContent = data.follower_count ?? 0;
           if (fw) fw.textContent = data.following_count ?? 0;
 
-          // Sync name
           const u = data.user || {};
           if (u.name) {
-            page.querySelector('#prof-name')?.textContent === '' || (page.querySelector('#prof-name').textContent = u.name);
+            const nameEl = page.querySelector('#prof-name');
+            if (nameEl) nameEl.textContent = u.name;
             const av = page.querySelector('#prof-avatar');
-            if (av) av.textContent = initial(u.name);
+            if (av) av.textContent = u.name.charAt(0).toUpperCase();
           }
 
-          // Skin badges
           const badgesEl = page.querySelector('#prof-badges');
           if (badgesEl && u) {
             const st = u.skin_type || skinType;
             const sp = (u.skin_problems||'').split(',').filter(p=>p.trim());
-            const stColor = st==='Berminyak' ? {bg:'#EFF6FF',c:'#1D4ED8'}
-              : st==='Normal' ? {bg:'#ECFDF5',c:'#065F46'}
-              : st==='Kombinasi' ? {bg:'#FFFBEB',c:'#92400E'}
-              : st==='Kering' ? {bg:'#FEF2F2',c:'#991B1B'}
-              : {bg:'#F3F4F6',c:'#374151'};
-            const PROB_C = {
-              Jerawat:{bg:'#FEE2E2',c:'#DC2626'},PIE:{bg:'#FCE7F3',c:'#DB2777'},
-              PIH:{bg:'#FDF4FF',c:'#9333EA'},Kemerahan:{bg:'#FFF0F0',c:'#EF4444'},
-              Hiperpigmentasi:{bg:'#FFF7ED',c:'#EA580C'},Aging:{bg:'#F5F3FF',c:'#7C3AED'},
-            };
-            badgesEl.innerHTML = (st ? `<span class="prof-badge" style="background:${stColor.bg};color:${stColor.c}">${esc(st)}</span>` : '')
-              + sp.map(p => { const pc2=PROB_C[p.trim()]||{bg:'#F3F4F6',c:'#374151'}; return `<span class="prof-badge" style="background:${pc2.bg};color:${pc2.c}">${esc(p.trim())}</span>`; }).join('');
+            const stColor = st==='Berminyak'?{bg:'#EFF6FF',c:'#1D4ED8'}:st==='Normal'?{bg:'#ECFDF5',c:'#065F46'}:st==='Kombinasi'?{bg:'#FFFBEB',c:'#92400E'}:st==='Kering'?{bg:'#FEF2F2',c:'#991B1B'}:{bg:'#F3F4F6',c:'#374151'};
+            const PC={Jerawat:{bg:'#FEE2E2',c:'#DC2626'},PIE:{bg:'#FCE7F3',c:'#DB2777'},PIH:{bg:'#FDF4FF',c:'#9333EA'},Kemerahan:{bg:'#FFF0F0',c:'#EF4444'},Hiperpigmentasi:{bg:'#FFF7ED',c:'#EA580C'},Aging:{bg:'#F5F3FF',c:'#7C3AED'}};
+            badgesEl.innerHTML=(st?`<span class="prof-badge" style="background:${stColor.bg};color:${stColor.c}">${esc(st)}</span>`:'')+sp.map(p=>{const c=PC[p.trim()]||{bg:'#F3F4F6',c:'#374151'};return`<span class="prof-badge" style="background:${c.bg};color:${c.c}">${esc(p.trim())}</span>`;}).join('');
           }
 
-          // Sync localStorage
-          if (u.name || u.email) {
-            const cached = JSON.parse(localStorage.getItem('bglow_user')||'{}');
-            localStorage.setItem('bglow_user', JSON.stringify({...cached, ...(u.name && {name:u.name}), ...(u.email && {email:u.email})}));
+          if (u.name||u.email) {
+            const cached=JSON.parse(localStorage.getItem('bglow_user')||'{}');
+            localStorage.setItem('bglow_user',JSON.stringify({...cached,...(u.name&&{name:u.name}),...(u.email&&{email:u.email})}));
           }
-        } catch(e) { console.error('Profile load error', e); }
+        } catch(e){console.error('Profile load error',e);}
       })();
     }
   }, 0);

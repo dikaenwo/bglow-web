@@ -64,7 +64,7 @@
 /* ─── Posts List ── */
 
 .feed-list {
-  padding: 12px 0 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -78,6 +78,7 @@
   border-bottom: 1px solid #e4e6ea;
   padding: 14px 16px 0;
   animation: feedSlideIn 0.3s ease both;
+  overflow: hidden;
 }
 
 @keyframes feedSlideIn {
@@ -166,13 +167,15 @@
   white-space: pre-wrap;
 }
 
-/* Post image */
+/* Post image — full width, no border radius, bleeds edge to edge */
 .post-image {
+  display: block;
   width: calc(100% + 32px);
   margin-left: -16px;
+  margin-right: -16px;
   object-fit: cover;
-  max-height: 350px;
-  display: block;
+  max-height: 380px;
+  min-height: 180px;
   margin-bottom: 0;
   background: #f0f2f5;
 }
@@ -191,7 +194,7 @@
 .post-stats-likes {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .post-stats-likes-icon {
@@ -201,7 +204,25 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+}
+
+.post-stats-likes-icon svg {
+  width: 10px; height: 10px;
+  fill: #fff;
+  stroke: none;
+}
+
+.post-stats-comment {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.post-stats-comment svg {
+  width: 14px; height: 14px;
+  fill: none;
+  stroke: #65676b;
+  stroke-width: 2;
 }
 
 /* Post footer: action buttons */
@@ -825,58 +846,76 @@
 .star-filled { fill: #f59e0b; stroke: #f59e0b; }
 .star-empty  { fill: none; stroke: #d1d5db; stroke-width: 2; }
 
-/* ─── Profile Post Card (mini, for profile page) ── */
-
-.profile-post-card {
-  background: #fff;
-  border: 1px solid #e4e6ea;
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.profile-post-card:hover { background: #f7f8fa; }
-
-.profile-post-content {
-  font-size: 14px;
-  color: #050505;
-  line-height: 1.5;
-  margin-bottom: 8px;
-  word-break: break-word;
-  white-space: pre-wrap;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.profile-post-img {
-  width: 100%;
-  border-radius: 8px;
-  object-fit: cover;
-  max-height: 160px;
-  display: block;
-  margin-bottom: 8px;
-}
-
-.profile-post-meta {
-  font-size: 11.5px;
-  color: #65676b;
-  display: flex;
-  gap: 12px;
-}
+/* ─── Profile Posts — Instagram grid ── */
 
 .profile-posts-section {
-  padding: 16px;
+  padding: 14px 16px 20px;
 }
 
 .profile-posts-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: #050505;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-posts-title svg {
+  width: 16px; height: 16px;
+  stroke: #1877f2;
+  fill: none;
+  stroke-width: 2;
+}
+
+.profile-posts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+
+.profile-post-thumb {
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #f0f2f5;
+  cursor: pointer;
+  position: relative;
+}
+
+.profile-post-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.2s;
+}
+
+.profile-post-thumb:hover img { opacity: 0.85; }
+
+/* text-only post in grid */
+.profile-post-thumb-text {
+  aspect-ratio: 1;
+  background: #f0f2f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  cursor: pointer;
+  border: 1px solid #e4e6ea;
+  overflow: hidden;
+}
+
+.profile-post-thumb-text p {
+  font-size: 12px;
+  color: #374151;
+  line-height: 1.4;
+  text-align: center;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
 }
 
 .profile-posts-empty {
@@ -885,3 +924,6 @@
   color: #65676b;
   font-size: 13.5px;
 }
+
+/* Keep old card style for fallback */
+.profile-post-card { display: none; }

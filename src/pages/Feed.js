@@ -299,12 +299,22 @@ function renderPostCard(post) {
     ${post.content ? `<div class="post-content">${escapeHtml(post.content)}</div>` : ''}
     ${imageHtml}
     ${likeCount > 0 || commentCount > 0 ? `
-    <div class="post-stats">
-      <div class="post-stats-likes">
-        ${likeCount > 0 ? `<span class="post-stats-likes-icon">❤️</span> <span class="like-stats-count">${likeCount}</span>` : ''}
-      </div>
-      ${commentCount > 0 ? `<span><span class="comment-count-label">${commentCount}</span> komentar</span>` : ''}
-    </div>` : '<div class="post-stats" style="display:none"></div>'}
+  <div class="post-stats">
+    <div class="post-stats-likes">
+      ${likeCount > 0 ? `
+        <span class="post-stats-likes-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        </span>
+        <span class="like-stats-count">${likeCount}</span>
+      ` : ''}
+    </div>
+    ${commentCount > 0 ? `
+      <span class="post-stats-comment">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <span class="comment-count-label">${commentCount}</span> komentar
+      </span>
+    ` : ''}
+  </div>` : '<div class="post-stats" style="display:none"></div>'}
     <div class="post-footer">
       <button class="like-btn ${post.liked_by_me ? 'liked' : ''}" data-action="like">
         ${HEART_SVG} Suka
@@ -577,14 +587,15 @@ export function renderFeed() {
 export async function renderMyPosts(containerEl) {
   if (!containerEl) return;
 
+  const POST_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`;
+
   containerEl.innerHTML = `
     <div class="profile-posts-section">
-      <div class="profile-posts-title">📝 Post Saya</div>
-      <div id="my-posts-list">
-        ${Array.from({length:2}).map(() => `
-          <div class="post-skeleton" style="border-radius:12px;margin-bottom:10px">
-            <div class="skeleton-line" style="width:80%"></div>
-            <div class="skeleton-line" style="width:60%"></div>
+      <div class="profile-posts-title">${POST_SVG} Post Saya</div>
+      <div class="profile-posts-grid" id="my-posts-grid">
+        ${Array.from({length:6}).map(() => `
+          <div class="profile-post-thumb" style="background:#f0f2f5">
+            <div class="skeleton-line" style="width:100%;height:100%;margin:0;border-radius:0"></div>
           </div>
         `).join('')}
       </div>
@@ -594,31 +605,29 @@ export async function renderMyPosts(containerEl) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/users/me/posts`, { headers: authHeaders() });
     const data = await res.json();
-    const listEl = containerEl.querySelector('#my-posts-list');
+    const gridEl = containerEl.querySelector('#my-posts-grid');
 
     if (!data.posts || data.posts.length === 0) {
-      listEl.innerHTML = `<div class="profile-posts-empty">Belum ada post. <button style="color:#1877f2;background:none;border:none;cursor:pointer;font-weight:600" onclick="window.location.hash='#/feed'">Buat Post →</button></div>`;
+      gridEl.outerHTML = `<div class="profile-posts-empty">Belum ada post. <button style="color:#1877f2;background:none;border:none;cursor:pointer;font-weight:600" onclick="window.location.hash='#/feed'">Buat Post →</button></div>`;
       return;
     }
 
-    listEl.innerHTML = '';
+    gridEl.innerHTML = '';
     data.posts.forEach(p => {
-      const card = document.createElement('div');
-      card.className = 'profile-post-card';
-      card.innerHTML = `
-        ${p.image_url ? `<img src="${API_BASE_URL}${p.image_url}" class="profile-post-img" loading="lazy" />` : ''}
-        ${p.content   ? `<div class="profile-post-content">${escapeHtml(p.content)}</div>` : ''}
-        <div class="profile-post-meta">
-          <span>❤️ ${p.like_count || 0} suka</span>
-          <span>💬 ${p.comment_count || 0} komentar</span>
-          <span>${timeAgo(p.created_at)}</span>
-        </div>
-      `;
-      card.addEventListener('click', () => { window.location.hash = '#/feed'; });
-      listEl.appendChild(card);
+      const thumb = document.createElement('div');
+      if (p.image_url) {
+        thumb.className = 'profile-post-thumb';
+        thumb.innerHTML = `<img src="${API_BASE_URL}${p.image_url}" loading="lazy" alt="post" />`;
+      } else {
+        thumb.className = 'profile-post-thumb-text';
+        thumb.innerHTML = `<p>${escapeHtml(p.content || '')}</p>`;
+      }
+      thumb.title = `${p.like_count || 0} suka · ${p.comment_count || 0} komentar`;
+      thumb.addEventListener('click', () => { window.location.hash = '#/feed'; });
+      gridEl.appendChild(thumb);
     });
   } catch (err) {
     console.warn('[Profile Posts]', err);
-    containerEl.querySelector('#my-posts-list').innerHTML = '<div class="profile-posts-empty">Gagal memuat post</div>';
+    containerEl.querySelector('#my-posts-grid').innerHTML = '<div class="profile-posts-empty">Gagal memuat post</div>';
   }
 }

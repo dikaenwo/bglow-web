@@ -546,13 +546,10 @@ function renderPostCard(post) {
         <span class="like-stats-count">${likeCount}</span>
       ` : ''}
     </div>
-    ${commentCount > 0 ? `
-      <span class="post-stats-comment">
-        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-        <span class="comment-count-label">${commentCount}</span> komentar
-      </span>
-    ` : ''}
-  </div>` : '<div class="post-stats" style="display:none"></div>'}
+    <span class="post-stats-comment" style="cursor:pointer" onclick="window.location.hash='#/post/${post.id}'">
+      <span class="comment-count-label">${commentCount}</span> komentar
+    </span>
+  </div>` : ''}
     <div class="post-footer">
       <button class="like-btn ${post.liked_by_me ? 'liked' : ''}" data-action="like">
         ${HEART_SVG} Suka
@@ -845,15 +842,22 @@ export function renderFeed() {
 
   const page = document.createElement('div');
   page.className = 'feed-page';
+  const FLASK_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M9 3h6v2l2 4v8a2 2 0 01-2 2H9a2 2 0 01-2-2v-8l2-4V3z" stroke="white" stroke-width="1.5" fill="none"/><path d="M7 13h10M9 17h.01M12 17h.01M15 17h.01" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  const SEARCH_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+
   page.innerHTML = `
-    <div class="feed-header" style="padding:0">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 0">
-        <span style="font-size:20px;font-weight:800;color:#050505;letter-spacing:-0.3px">B-Glow</span>
+    <div class="feed-header">
+      <div class="feed-header-top">
+        <div class="feed-logo-icon">${FLASK_SVG}</div>
+        <div class="feed-search-bar" id="feed-search-trigger">
+          ${SEARCH_SVG}
+          <span>Search</span>
+        </div>
         <button class="feed-create-btn" id="feed-create-btn" title="Buat post baru">${PLUS_SVG}</button>
       </div>
-      <div class="feed-tabs" style="display:flex;border-bottom:1px solid #e4e6ea;margin-top:8px">
-        <button class="feed-tab active" id="tab-foryou" data-tab="foryou" style="flex:1;padding:10px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:2px solid #1877f2;color:#1877f2;cursor:pointer">For You</button>
-        <button class="feed-tab" id="tab-following" data-tab="following" style="flex:1;padding:10px;font-size:14px;font-weight:600;background:none;border:none;border-bottom:2px solid transparent;color:#65676b;cursor:pointer">Following</button>
+      <div class="feed-tabs">
+        <button class="feed-tab-pill active" data-tab="foryou">For You</button>
+        <button class="feed-tab-pill" data-tab="following">Following</button>
       </div>
     </div>
     <div class="feed-list" id="feed-post-list"></div>
@@ -862,20 +866,18 @@ export function renderFeed() {
   _postListEl = page.querySelector('#feed-post-list');
 
   // Tab switching
-  page.querySelectorAll('.feed-tab').forEach(btn => {
+  page.querySelectorAll('.feed-tab-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       _activeTab = btn.dataset.tab;
-      page.querySelectorAll('.feed-tab').forEach(t => {
-        const active = t.dataset.tab === _activeTab;
-        t.style.color = active ? '#1877f2' : '#65676b';
-        t.style.fontWeight = active ? '700' : '600';
-        t.style.borderBottom = active ? '2px solid #1877f2' : '2px solid transparent';
+      page.querySelectorAll('.feed-tab-pill').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === _activeTab);
       });
       loadFeed(true);
     });
   });
 
   page.querySelector('#feed-create-btn').addEventListener('click', openModal);
+  page.querySelector('#feed-search-trigger')?.addEventListener('click', () => { window.location.hash = '#/bpom-check'; });
 
   // Realtime timestamp update every 30s
   _tsInterval = setInterval(() => {

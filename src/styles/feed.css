@@ -10,28 +10,98 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.97);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid #e4e6ea;
-  padding: 14px 20px 12px;
+  padding: 0;
+}
+
+.feed-header-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
 }
 
-.feed-header h1 {
-  font-size: 20px;
-  font-weight: 800;
-  color: #1877f2;
-  margin: 0;
-  letter-spacing: -0.3px;
+.feed-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1877f2, #0ea5e9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(24,119,242,0.3);
 }
 
-.feed-header-sub {
-  font-size: 11.5px;
+.feed-search-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0f2f5;
+  border-radius: 22px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.feed-search-bar svg {
+  flex-shrink: 0;
   color: #65676b;
-  margin-top: 1px;
+}
+
+.feed-search-bar span {
+  font-size: 14px;
+  color: #65676b;
+}
+
+.feed-menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #050505;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.feed-menu-btn span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: #050505;
+  border-radius: 2px;
+}
+
+.feed-tabs {
+  display: flex;
+  border-bottom: 1px solid #e4e6ea;
+  padding: 0 14px;
+  gap: 6px;
+}
+
+.feed-tab-pill {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  background: none;
+  border-bottom: 2.5px solid transparent;
+  color: #65676b;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: center;
+}
+
+.feed-tab-pill.active {
+  color: #1877f2;
+  font-weight: 700;
+  border-bottom-color: #1877f2;
 }
 
 /* ─── Create Post Button ── */
@@ -39,27 +109,26 @@
 .feed-create-btn {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 18px;
-  border-radius: 50px;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   background: #1877f2;
   border: none;
   color: #fff;
-  font-size: 13.5px;
-  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(24, 119, 242, 0.35);
+  flex-shrink: 0;
 }
 
 .feed-create-btn:hover {
   background: #1465d8;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(24, 119, 242, 0.4);
+  transform: scale(1.08);
 }
 
-.feed-create-btn:active { transform: translateY(0); }
-.feed-create-btn svg { width: 15px; height: 15px; stroke-width: 2.5; }
+.feed-create-btn:active { transform: scale(0.96); }
+.feed-create-btn svg { width: 16px; height: 16px; stroke-width: 2.5; }
 
 /* ─── Posts List ── */
 

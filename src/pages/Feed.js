@@ -842,13 +842,14 @@ export function renderFeed() {
 
   const page = document.createElement('div');
   page.className = 'feed-page';
-  const FLASK_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M9 3h6v2l2 4v8a2 2 0 01-2 2H9a2 2 0 01-2-2v-8l2-4V3z" stroke="white" stroke-width="1.5" fill="none"/><path d="M7 13h10M9 17h.01M12 17h.01M15 17h.01" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>`;
   const SEARCH_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
 
   page.innerHTML = `
     <div class="feed-header">
       <div class="feed-header-top">
-        <div class="feed-logo-icon">${FLASK_SVG}</div>
+        <div class="feed-logo-icon" style="background:none;box-shadow:none;border-radius:0;width:38px;height:38px">
+          <img src="/BGLOW-Polos.png" style="width:38px;height:38px;object-fit:contain" alt="B-Glow" />
+        </div>
         <div class="feed-search-bar" id="feed-search-trigger">
           ${SEARCH_SVG}
           <span>Search</span>

@@ -69,6 +69,8 @@ let _submitting      = false;
 let _postListEl      = null;
 let _modalEl         = null;
 let _overlayEl       = null;
+let _activeTab       = 'foryou'; // 'foryou' | 'following'
+let _tsInterval      = null;
 
 // ─── API ─────────────────────────────────────────────────────────────────────
 
@@ -98,6 +100,12 @@ async function apiDeletePost(postId) {
 async function apiToggleLike(postId) {
   const res = await fetch(`${API_BASE_URL}/api/posts/${postId}/like`, { method: 'POST', headers: authHeaders() });
   if (!res.ok) throw new Error('Gagal toggle like');
+  return res.json();
+}
+
+async function apiFetchFollowingFeed(page = 1) {
+  const res = await fetch(`${API_BASE_URL}/api/feed/following?page=${page}&limit=20`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
@@ -521,7 +529,7 @@ function renderPostCard(post) {
         <span class="post-user-name">${escapeHtml(post.user_name || 'Pengguna')}</span>
         <div class="post-meta">
           ${post.skin_type ? `<span class="post-skin-badge">${escapeHtml(post.skin_type)}</span>` : ''}
-          <span class="post-time">${timeAgo(post.created_at)}</span>
+          <span class="post-time" data-created-at="${post.created_at}">${timeAgo(post.created_at)}</span>
         </div>
       </div>
       ${menuHtml}
@@ -653,12 +661,17 @@ async function loadFeed(reset = false) {
   if (_postListEl && _page === 1) skeletons.forEach(s => _postListEl.appendChild(s));
 
   try {
-    const data = await apiFetchFeed(_page);
+    const data = _activeTab === 'following'
+      ? await apiFetchFollowingFeed(_page)
+      : await apiFetchFeed(_page);
     skeletons.forEach(s => s.remove());
     _hasMore = data.has_more;
     _page++;
 
-    if (data.posts.length === 0 && _posts.length === 0) { renderEmptyState(); return; }
+    if (data.posts.length === 0 && _posts.length === 0) {
+      renderEmptyState(_activeTab === 'following');
+      return;
+    }
 
     _posts.push(...data.posts);
     data.posts.forEach(post => { if (_postListEl) _postListEl.appendChild(renderPostCard(post)); });
@@ -666,14 +679,24 @@ async function loadFeed(reset = false) {
   } catch (err) {
     skeletons.forEach(s => s.remove());
     console.error('[Feed]', err);
-    if (_postListEl && _posts.length === 0) renderEmptyState();
+    if (_postListEl && _posts.length === 0) renderEmptyState(_activeTab === 'following');
   } finally {
     _isLoading = false;
   }
 }
 
-function renderEmptyState() {
+function renderEmptyState(isFollowing = false) {
   if (!_postListEl) return;
+  if (isFollowing) {
+    _postListEl.innerHTML = `
+      <div class="feed-empty">
+        <div class="feed-empty-icon" style="font-size:38px;margin-bottom:10px">👥</div>
+        <h3 style="font-size:15px;margin:0 0 6px">Belum ada yang di-follow</h3>
+        <p style="font-size:13px;margin:0 0 16px;color:#65676b">Follow orang dulu biar muncul postnya di sini!</p>
+      </div>
+    `;
+    return;
+  }
   _postListEl.innerHTML = `
     <div class="feed-empty">
       <div class="feed-empty-icon" style="font-size:38px;margin-bottom:10px">💬</div>
@@ -815,22 +838,62 @@ async function submitPost() {
 export function renderFeed() {
   _posts = []; _page = 1; _hasMore = true;
   _isLoading = false; _showModal = false;
+  _activeTab = 'foryou';
+
+  // Clear previous realtime interval
+  if (_tsInterval) { clearInterval(_tsInterval); _tsInterval = null; }
 
   const page = document.createElement('div');
   page.className = 'feed-page';
   page.innerHTML = `
-    <div class="feed-header">
-      <div>
-        <h1>B-Glow Community</h1>
-        <div class="feed-header-sub">Berbagi tips & pengalaman skincare</div>
+    <div class="feed-header" style="padding:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 0">
+        <span style="font-size:20px;font-weight:800;color:#050505;letter-spacing:-0.3px">B-Glow</span>
+        <button class="feed-create-btn" id="feed-create-btn" title="Buat post baru">${PLUS_SVG}</button>
       </div>
-      <button class="feed-create-btn" id="feed-create-btn">${PLUS_SVG} Post</button>
+      <div class="feed-tabs" style="display:flex;border-bottom:1px solid #e4e6ea;margin-top:8px">
+        <button class="feed-tab active" id="tab-foryou" data-tab="foryou" style="flex:1;padding:10px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:2px solid #1877f2;color:#1877f2;cursor:pointer">For You</button>
+        <button class="feed-tab" id="tab-following" data-tab="following" style="flex:1;padding:10px;font-size:14px;font-weight:600;background:none;border:none;border-bottom:2px solid transparent;color:#65676b;cursor:pointer">Following</button>
+      </div>
     </div>
     <div class="feed-list" id="feed-post-list"></div>
   `;
 
   _postListEl = page.querySelector('#feed-post-list');
+
+  // Tab switching
+  page.querySelectorAll('.feed-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _activeTab = btn.dataset.tab;
+      page.querySelectorAll('.feed-tab').forEach(t => {
+        const active = t.dataset.tab === _activeTab;
+        t.style.color = active ? '#1877f2' : '#65676b';
+        t.style.fontWeight = active ? '700' : '600';
+        t.style.borderBottom = active ? '2px solid #1877f2' : '2px solid transparent';
+      });
+      loadFeed(true);
+    });
+  });
+
   page.querySelector('#feed-create-btn').addEventListener('click', openModal);
+
+  // Realtime timestamp update every 30s
+  _tsInterval = setInterval(() => {
+    document.querySelectorAll('[data-created-at]').forEach(el => {
+      el.textContent = timeAgo(el.dataset.createdAt);
+    });
+  }, 30000);
+
+  // Cleanup interval when page is removed from DOM
+  const observer = new MutationObserver(() => {
+    if (!document.body.contains(page)) {
+      clearInterval(_tsInterval);
+      _tsInterval = null;
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
   requestAnimationFrame(() => loadFeed(true));
   return page;
 }

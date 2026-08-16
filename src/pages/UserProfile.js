@@ -5,23 +5,26 @@ function getAuthToken() {
   catch { return localStorage.getItem('bglow_token') || null; }
 }
 
+function getCurrentUserId() {
+  try { return JSON.parse(localStorage.getItem('bglow_user') || '{}').id || null; } catch { return null; }
+}
+
 const authH = () => ({ Authorization: `Bearer ${getAuthToken()}` });
 
 function timeAgo(iso) {
+  if (!iso) return '';
   const d = Math.floor((Date.now() - new Date(iso)) / 1000);
   if (d < 60) return 'Baru saja';
-  if (d < 3600) return `${Math.floor(d / 60)}m lalu`;
-  if (d < 86400) return `${Math.floor(d / 3600)}j lalu`;
+  if (d < 3600) return `${Math.floor(d / 60)} menit lalu`;
+  if (d < 86400) return `${Math.floor(d / 3600)} jam lalu`;
+  if (d < 604800) return `${Math.floor(d / 86400)} hari lalu`;
   return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
 
 function initial(n) { return (n || '?').trim().charAt(0).toUpperCase(); }
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-function esc(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-const BACK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+const BACK = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 
 const SKIN_LABEL = {
   Berminyak: { bg: '#fef3c7', color: '#92400e', label: '💧 Berminyak' },
@@ -31,6 +34,7 @@ const SKIN_LABEL = {
 };
 
 export function renderUserProfile(userId) {
+  const myId = getCurrentUserId();
   const page = document.createElement('div');
   page.style.cssText = 'min-height:100vh;background:#f0f2f5;display:flex;flex-direction:column';
 
@@ -44,42 +48,43 @@ export function renderUserProfile(userId) {
   header.querySelector('#up-back').addEventListener('click', () => history.back());
   page.appendChild(header);
 
-  // ── Scrollable body ──
   const body = document.createElement('div');
   body.style.cssText = 'flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch';
-
-  // Skeleton
   body.innerHTML = `
     <div style="background:#fff;padding:24px 16px;margin-bottom:8px;display:flex;flex-direction:column;align-items:center;gap:12px">
       <div style="width:80px;height:80px;border-radius:50%;background:#e4e6ea;animation:shimmer 1.5s infinite"></div>
       <div style="height:16px;width:40%;background:#e4e6ea;border-radius:8px;animation:shimmer 1.5s infinite"></div>
-      <div style="height:11px;width:26%;background:#e4e6ea;border-radius:6px;animation:shimmer 1.5s infinite"></div>
     </div>
   `;
   page.appendChild(body);
 
-  // ── Load profile ──
   (async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/users/${userId}/profile`, { headers: authH() });
       if (!res.ok) { body.innerHTML = '<div style="text-align:center;padding:48px;color:#65676b">Pengguna tidak ditemukan</div>'; return; }
       const data = await res.json();
       const user = data.user;
+      const isOwnProfile = data.is_own_profile || (String(myId) === String(userId));
 
-      // Update header name
       header.querySelector('#up-header-name').textContent = user.name || 'Profil';
 
       const skin = user.skin_type ? (SKIN_LABEL[user.skin_type] || { bg: '#f0f2f5', color: '#374151', label: user.skin_type }) : null;
 
-      // Stats pills
-      const stats = [
-        { label: 'Post', value: data.post_count || 0 },
-      ];
+      let isFollowing = data.is_following || false;
+      let followerCount = data.follower_count || 0;
+
+      const followBtnHtml = isOwnProfile ? '' : `
+        <button id="up-follow-btn" style="
+          padding:8px 24px;border-radius:20px;font-size:13px;font-weight:700;
+          cursor:pointer;border:${isFollowing ? '1.5px solid #ccc' : 'none'};
+          background:${isFollowing ? '#fff' : '#1877f2'};
+          color:${isFollowing ? '#050505' : '#fff'};
+          transition:all 0.2s;min-width:100px;margin-top:4px
+        ">${isFollowing ? 'Following' : '+ Follow'}</button>
+      `;
 
       body.innerHTML = `
-        <!-- Profile card -->
         <div style="background:#fff;margin-bottom:8px">
-          <!-- Avatar + name -->
           <div style="padding:28px 16px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;border-bottom:1px solid #f0f2f5">
             <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:#fff;box-shadow:0 4px 16px rgba(24,119,242,0.25)">
               ${initial(user.name)}
@@ -89,14 +94,22 @@ export function renderUserProfile(userId) {
               ${skin ? `<span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:${skin.bg};color:${skin.color}">${skin.label}</span>` : ''}
             </div>
             <!-- Stats row -->
-            <div style="display:flex;gap:28px;margin-top:6px">
+            <div style="display:flex;gap:32px;margin-top:4px">
               <div style="text-align:center">
                 <div style="font-size:20px;font-weight:800;color:#050505">${data.post_count || 0}</div>
                 <div style="font-size:12px;color:#65676b;font-weight:500">Post</div>
               </div>
+              <div style="text-align:center">
+                <div id="up-follower-count" style="font-size:20px;font-weight:800;color:#050505">${followerCount}</div>
+                <div style="font-size:12px;color:#65676b;font-weight:500">Followers</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:20px;font-weight:800;color:#050505">${data.following_count || 0}</div>
+                <div style="font-size:12px;color:#65676b;font-weight:500">Following</div>
+              </div>
             </div>
+            ${followBtnHtml}
           </div>
-          <!-- Skin detail -->
           ${user.skin_type ? `
           <div style="padding:14px 16px">
             <div style="font-size:13px;font-weight:700;color:#65676b;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.3px">Skin Profile</div>
@@ -109,7 +122,6 @@ export function renderUserProfile(userId) {
           </div>` : ''}
         </div>
 
-        <!-- Posts section -->
         <div style="background:#fff;padding:14px 0">
           <div style="font-size:15px;font-weight:800;color:#050505;padding:0 16px 12px;border-bottom:1px solid #e4e6ea">
             Post dari ${esc(user.name || 'Pengguna')}
@@ -120,13 +132,42 @@ export function renderUserProfile(userId) {
         </div>
       `;
 
+      // Follow button handler
+      if (!isOwnProfile) {
+        const followBtn = body.querySelector('#up-follow-btn');
+        const followerCountEl = body.querySelector('#up-follower-count');
+        followBtn?.addEventListener('click', async () => {
+          const prev = isFollowing;
+          isFollowing = !isFollowing;
+          followerCount += isFollowing ? 1 : -1;
+          followBtn.textContent = isFollowing ? 'Following' : '+ Follow';
+          followBtn.style.background = isFollowing ? '#fff' : '#1877f2';
+          followBtn.style.color = isFollowing ? '#050505' : '#fff';
+          followBtn.style.border = isFollowing ? '1.5px solid #ccc' : 'none';
+          if (followerCountEl) followerCountEl.textContent = followerCount;
+          try {
+            const r = await fetch(`${API_BASE_URL}/api/users/${userId}/follow`, { method: 'POST', headers: authH() });
+            const d = await r.json();
+            followerCount = d.follower_count;
+            isFollowing = d.following;
+            if (followerCountEl) followerCountEl.textContent = followerCount;
+            followBtn.textContent = isFollowing ? 'Following' : '+ Follow';
+          } catch {
+            // revert
+            isFollowing = prev;
+            followerCount += isFollowing ? 1 : -1;
+            followBtn.textContent = isFollowing ? 'Following' : '+ Follow';
+          }
+        });
+      }
+
       // Render posts
       const postsList = body.querySelector('#up-posts-list');
       data.posts.forEach(p => {
         const item = document.createElement('div');
-        item.style.cssText = 'border-bottom:1px solid #f0f2f5;padding:14px 16px;cursor:pointer';
+        item.style.cssText = 'border-bottom:1px solid #f0f2f5;padding:14px 16px;cursor:pointer;transition:background 0.15s';
         item.addEventListener('mouseover', () => item.style.background = '#f9f9f9');
-        item.addEventListener('mouseout', () => item.style.background = '');
+        item.addEventListener('mouseout',  () => item.style.background = '');
         item.addEventListener('click', () => { window.location.hash = `#/post/${p.id}`; });
 
         const imageHtml = p.image_url ? `
@@ -137,10 +178,10 @@ export function renderUserProfile(userId) {
         item.innerHTML = `
           ${p.content ? `<div style="font-size:14px;color:#050505;line-height:1.55;word-break:break-word;white-space:pre-wrap;margin-bottom:6px">${esc(p.content)}</div>` : ''}
           ${imageHtml}
-          <div style="display:flex;gap:12px;font-size:12px;color:#65676b;margin-top:6px">
+          <div style="display:flex;gap:12px;font-size:12px;color:#65676b;margin-top:6px;align-items:center">
             <span>❤️ ${p.like_count || 0}</span>
             <span>💬 ${p.comment_count || 0}</span>
-            <span style="margin-left:auto">${timeAgo(p.created_at)}</span>
+            <span style="margin-left:auto" data-created-at="${p.created_at}">${timeAgo(p.created_at)}</span>
           </div>
         `;
         postsList.appendChild(item);

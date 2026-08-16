@@ -45,13 +45,13 @@ const COMMENT_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none"
 let _replyTo = null; // { id, user_name }
 
 // ── Build one comment element (with like + reply) ──
-function buildCommentEl(c, { onReply, onLike, isReply = false }) {
+function buildCommentEl(c, { onReply, onLike, isReply = false, topLevelId = null }) {
   const el = document.createElement('div');
   el.dataset.commentId = c.id;
   el.style.cssText = `
     display:flex; gap:8px;
     margin-bottom:${isReply ? '10px' : '14px'};
-    ${isReply ? 'margin-left:38px;' : ''}
+    ${isReply ? 'margin-left:42px;' : ''}
     animation: feedSlideIn 0.22s ease;
   `;
 
@@ -90,9 +90,9 @@ function buildCommentEl(c, { onReply, onLike, isReply = false }) {
           </svg>
           <span class="cl-like-count">${c.like_count > 0 ? c.like_count : ''}</span>
         </button>
-        ${!isReply ? `<button class="cl-reply-btn"
+        <button class="cl-reply-btn"
           style="background:none;border:none;font-size:12px;font-weight:700;
-            color:#65676b;cursor:pointer;padding:0">Balas</button>` : ''}
+            color:#65676b;cursor:pointer;padding:0">Balas</button>
       </div>
       <div class="replies-container"></div>
     </div>
@@ -102,15 +102,18 @@ function buildCommentEl(c, { onReply, onLike, isReply = false }) {
   const likeBtn = el.querySelector('.cl-like-btn');
   likeBtn?.addEventListener('click', () => onLike(c.id, likeBtn));
 
-  // Reply
+  // Reply — if this is a reply, use its top-level parent id so nested replies stay in same thread
   const replyBtn = el.querySelector('.cl-reply-btn');
-  replyBtn?.addEventListener('click', () => onReply(c));
+  replyBtn?.addEventListener('click', () => {
+    const replyParentId = isReply ? (topLevelId || c.id) : c.id;
+    onReply({ id: replyParentId, user_name: c.user_name });
+  });
 
   // Render nested replies
   if (c.replies && c.replies.length > 0) {
     const repliesContainer = el.querySelector('.replies-container');
     c.replies.forEach(r => {
-      repliesContainer.appendChild(buildCommentEl(r, { onReply, onLike, isReply: true }));
+      repliesContainer.appendChild(buildCommentEl(r, { onReply, onLike, isReply: true, topLevelId: c.id }));
     });
   }
 

@@ -389,11 +389,12 @@
 
 .post-stats-likes-icon {
   width: 18px; height: 18px;
-  background: #1877f2;
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 1px 3px rgba(228,30,63,0.25);
 }
 
 .post-stats-likes-icon svg {
@@ -405,14 +406,25 @@
 .post-stats-comment {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  cursor: pointer;
 }
 
-.post-stats-comment svg {
-  width: 14px; height: 14px;
-  fill: none;
-  stroke: #65676b;
-  stroke-width: 2;
+.post-stats-comment:hover { color: #050505; }
+
+.post-stats-comment-icon {
+  width: 18px; height: 18px;
+  background: #e4e6ea;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.post-stats-comment-icon svg {
+  width: 10px; height: 10px;
+  fill: #65676b;
+  stroke: none;
 }
 
 /* Post footer: action buttons */
@@ -452,8 +464,8 @@
   color: #050505;
 }
 
-.like-btn.liked { color: #1877f2; }
-.like-btn.liked svg { fill: #1877f2; stroke: #1877f2; }
+.like-btn.liked { color: #e41e3f; }
+.like-btn.liked svg { fill: #e41e3f; stroke: #e41e3f; }
 .like-btn:active svg { animation: likePulse 0.3s ease; }
 
 @keyframes likePulse {

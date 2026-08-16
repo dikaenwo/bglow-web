@@ -546,8 +546,11 @@ function renderPostCard(post) {
         <span class="like-stats-count">${likeCount}</span>
       ` : ''}
     </div>
-    <span class="post-stats-comment" style="cursor:pointer" onclick="window.location.hash='#/post/${post.id}'">
+    <span class="post-stats-comment" onclick="window.location.hash='#/post/${post.id}'">
       <span class="comment-count-label">${commentCount}</span> komentar
+      <span class="post-stats-comment-icon">
+        <svg viewBox="0 0 24 24"><path fill="#65676b" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </span>
     </span>
   </div>` : ''}
     <div class="post-footer">

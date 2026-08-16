@@ -447,6 +447,7 @@ export function renderSettings() {
     
     overlay.querySelector('#btn-save-skin').addEventListener('click', async () => {
       const formattedProblems = selectedProblems.map(p => ({ label: p, confidence: 0.95 }));
+      const skinProblemsStr = selectedProblems.join(','); // simpan sebagai string "Jerawat,PIE"
 
       if (userId && userId !== 'guest') {
         try {
@@ -457,7 +458,8 @@ export function renderSettings() {
             method: 'PUT',
             headers: getAuthHeaders(),
             body: JSON.stringify({
-              skin_type: selectedType
+              skin_type: selectedType,
+              skin_problems: skinProblemsStr
             })
           });
           

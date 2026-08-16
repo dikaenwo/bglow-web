@@ -157,7 +157,7 @@ export function renderUserProfile(userId) {
             <div style="font-size:13px;font-weight:700;color:#65676b;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.3px">Skin Profile</div>
             <div style="display:flex;flex-wrap:wrap;gap:8px">
               ${skinTypeBadge(user.skin_type)}
-              ${user.acne_level && user.acne_level !== 'Bersih' ? problemChip(`Jerawat: ${esc(user.acne_level)}`) : ''}
+              ${(user.skin_problems || '').split(',').filter(p => p.trim()).map(p => problemChip(p.trim())).join('')}
             </div>
           </div>` : ''}
         </div>

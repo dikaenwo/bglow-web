@@ -232,22 +232,12 @@ export function renderPostDetail(postId) {
       const post = await res.json();
 
       const images = parseImageUrls(post.image_url);
-      // Carousel: show 1 image + swipe
-      const carouselId = 'pd-carousel-' + postId;
       const imageHtml = images.length > 0 ? `
-        <div id="${carouselId}" style="position:relative;border-radius:14px;overflow:hidden;margin:8px 0 12px;background:#000;touch-action:pan-y">
-          <div class="pd-slides" style="display:flex;transition:transform 0.3s ease;will-change:transform">
-            ${images.map(url => `
-              <div style="min-width:100%;flex-shrink:0">
-                <img src="${url}" style="width:100%;max-height:340px;object-fit:contain;display:block;background:#111" loading="lazy" />
-              </div>`).join('')}
-          </div>
-          ${images.length > 1 ? `
-            <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:2">
-              ${images.map((_, i) => `<span class="pd-dot" data-i="${i}" style="width:6px;height:6px;border-radius:50%;background:${i === 0 ? '#fff' : 'rgba(255,255,255,0.45)'};transition:background 0.2s"></span>`).join('')}
-            </div>
-            <div style="position:absolute;top:8px;right:10px;background:rgba(0,0,0,0.45);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;z-index:2" class="pd-counter">1 / ${images.length}</div>
-          ` : ''}
+        <div style="display:grid;grid-template-columns:repeat(${Math.min(images.length, 3)},1fr);gap:3px;border-radius:14px;overflow:hidden;margin:8px 0 12px">
+          ${images.map((url, i) => `
+            <div style="aspect-ratio:1;overflow:hidden;cursor:zoom-in" class="pd-img-thumb" data-i="${i}">
+              <img src="${url}" style="width:100%;height:100%;object-fit:cover;display:block" loading="lazy" />
+            </div>`).join('')}
         </div>` : '';
 
       body.innerHTML = `
@@ -293,50 +283,60 @@ export function renderPostDetail(postId) {
         </div>
       `;
 
-      // ── Touch Carousel Init ──
-      if (images.length > 1) {
-        const carouselEl = body.querySelector(`#${carouselId}`);
-        const slidesEl   = carouselEl?.querySelector('.pd-slides');
-        const dots       = carouselEl?.querySelectorAll('.pd-dot');
-        const counter    = carouselEl?.querySelector('.pd-counter');
-        if (carouselEl && slidesEl) {
-          let cur = 0;
-          const goTo = (idx) => {
-            cur = Math.max(0, Math.min(idx, images.length - 1));
-            slidesEl.style.transform = `translateX(-${cur * 100}%)`;
-            dots?.forEach((d, i) => d.style.background = i === cur ? '#fff' : 'rgba(255,255,255,0.45)');
-            if (counter) counter.textContent = `${cur + 1} / ${images.length}`;
-          };
-          // Touch
-          let tx0 = 0;
-          carouselEl.addEventListener('touchstart', e => { tx0 = e.touches[0].clientX; }, { passive: true });
-          carouselEl.addEventListener('touchend', e => {
-            const dx = e.changedTouches[0].clientX - tx0;
-            if (Math.abs(dx) > 40) goTo(cur + (dx < 0 ? 1 : -1));
-          }, { passive: true });
-          // Tap on image → fullscreen lightbox
-          carouselEl.querySelectorAll('img').forEach((img, i) => {
-            img.addEventListener('click', () => {
-              const lb = document.createElement('div');
-              lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;touch-action:pan-y';
-              lb.innerHTML = `<img src="${images[i]}" style="max-width:100vw;max-height:90vh;object-fit:contain" /><button style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer">✕</button>`;
-              lb.querySelector('button').addEventListener('click', () => lb.remove());
-              lb.addEventListener('click', e => { if (e.target === lb) lb.remove(); });
-              document.body.appendChild(lb);
-            });
-          });
-        }
-      } else if (images.length === 1) {
-        // Single image tap → fullscreen
-        body.querySelector(`#${carouselId} img`)?.addEventListener('click', () => {
-          const lb = document.createElement('div');
-          lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:center;justify-content:center';
-          lb.innerHTML = `<img src="${images[0]}" style="max-width:100vw;max-height:90vh;object-fit:contain" /><button style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer">✕</button>`;
-          lb.querySelector('button').addEventListener('click', () => lb.remove());
-          lb.addEventListener('click', e => { if (e.target === lb) lb.remove(); });
-          document.body.appendChild(lb);
-        });
+      // Lightbox with arrow navigation
+      function openLightboxPD(startIdx) {
+        let lbIdx = startIdx;
+        const lb = document.createElement('div');
+        lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;touch-action:pan-y';
+
+        const imgEl = document.createElement('img');
+        imgEl.style.cssText = 'max-width:92vw;max-height:85vh;object-fit:contain;border-radius:4px;user-select:none';
+
+        const counter = document.createElement('div');
+        counter.style.cssText = 'position:absolute;top:14px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.5);color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.style.cssText = 'position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer';
+        closeBtn.textContent = '\u2715';
+
+        const prevBtn = document.createElement('button');
+        prevBtn.style.cssText = 'position:absolute;left:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.18);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center';
+        prevBtn.innerHTML = '&#8249;';
+
+        const nextBtn = document.createElement('button');
+        nextBtn.style.cssText = 'position:absolute;right:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.18);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center';
+        nextBtn.innerHTML = '&#8250;';
+
+        const update = () => {
+          imgEl.src = images[lbIdx];
+          counter.textContent = `${lbIdx + 1} / ${images.length}`;
+          prevBtn.style.opacity = lbIdx === 0 ? '0.3' : '1';
+          nextBtn.style.opacity = lbIdx === images.length - 1 ? '0.3' : '1';
+        };
+
+        prevBtn.addEventListener('click', e => { e.stopPropagation(); if (lbIdx > 0) { lbIdx--; update(); } });
+        nextBtn.addEventListener('click', e => { e.stopPropagation(); if (lbIdx < images.length - 1) { lbIdx++; update(); } });
+        closeBtn.addEventListener('click', () => lb.remove());
+        lb.addEventListener('click', e => { if (e.target === lb) lb.remove(); });
+
+        // Swipe in lightbox
+        let ltx = 0;
+        lb.addEventListener('touchstart', e => { ltx = e.touches[0].clientX; }, { passive: true });
+        lb.addEventListener('touchend', e => {
+          const dx = e.changedTouches[0].clientX - ltx;
+          if (Math.abs(dx) > 40) { if (dx < 0 && lbIdx < images.length - 1) lbIdx++; else if (dx > 0 && lbIdx > 0) lbIdx--; update(); }
+        }, { passive: true });
+
+        lb.appendChild(imgEl);
+        if (images.length > 1) { lb.appendChild(prevBtn); lb.appendChild(nextBtn); lb.appendChild(counter); }
+        lb.appendChild(closeBtn);
+        update();
+        document.body.appendChild(lb);
       }
+
+      body.querySelectorAll('.pd-img-thumb').forEach(el => {
+        el.addEventListener('click', () => openLightboxPD(parseInt(el.dataset.i) || 0));
+      });
 
       // Profile nav
       const goToProfile = () => { window.location.hash = `#/user/${post.user_id}`; };

@@ -191,21 +191,12 @@ function openPostDetail(post) {
   const overlay = document.createElement('div');
   overlay.className = 'post-detail-overlay';
 
-  const sheetCarouselId = 'pds-carousel-' + post.id;
   const imageGridHtml = images.length > 0 ? `
-    <div id="${sheetCarouselId}" style="position:relative;border-radius:14px;overflow:hidden;margin:8px 0 12px;background:#000;touch-action:pan-y">
-      <div class="pds-slides" style="display:flex;transition:transform 0.3s ease;will-change:transform">
-        ${images.map(url => `
-          <div style="min-width:100%;flex-shrink:0">
-            <img src="${url}" style="width:100%;max-height:320px;object-fit:contain;display:block;background:#111" loading="lazy" />
-          </div>`).join('')}
-      </div>
-      ${images.length > 1 ? `
-        <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:2">
-          ${images.map((_, i) => `<span class="pds-dot" data-i="${i}" style="width:6px;height:6px;border-radius:50%;background:${i === 0 ? '#fff' : 'rgba(255,255,255,0.45)'};transition:background 0.2s"></span>`).join('')}
-        </div>
-        <div style="position:absolute;top:8px;right:10px;background:rgba(0,0,0,0.45);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;z-index:2" class="pds-counter">1 / ${images.length}</div>
-      ` : ''}
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(images.length,3)},1fr);gap:3px;border-radius:14px;overflow:hidden;margin:8px 0 12px">
+      ${images.map((url, i) => `
+        <div class="post-image-thumb" data-img-idx="${i}" style="aspect-ratio:1;overflow:hidden;cursor:zoom-in">
+          <img src="${url}" style="width:100%;height:100%;object-fit:cover;display:block" loading="lazy" />
+        </div>`).join('')}
     </div>` : '';
 
   const sheet = document.createElement('div');
@@ -265,32 +256,10 @@ function openPostDetail(post) {
   sheet.querySelector('#pds-close-btn').addEventListener('click', closeSheet);
   overlay.addEventListener('click', e => { if (e.target === overlay) closeSheet(); });
 
-  // Image carousel touch swipe
-  if (images.length > 0) {
-    const carouselEl = sheet.querySelector(`#${sheetCarouselId}`);
-    const slidesEl   = carouselEl?.querySelector('.pds-slides');
-    const dots       = carouselEl?.querySelectorAll('.pds-dot');
-    const counter    = carouselEl?.querySelector('.pds-counter');
-    if (carouselEl && slidesEl) {
-      let cur = 0;
-      const goTo = (idx) => {
-        cur = Math.max(0, Math.min(idx, images.length - 1));
-        slidesEl.style.transform = `translateX(-${cur * 100}%)`;
-        dots?.forEach((d, i) => d.style.background = i === cur ? '#fff' : 'rgba(255,255,255,0.45)');
-        if (counter) counter.textContent = `${cur + 1} / ${images.length}`;
-      };
-      let tx0 = 0;
-      carouselEl.addEventListener('touchstart', e => { tx0 = e.touches[0].clientX; }, { passive: true });
-      carouselEl.addEventListener('touchend', e => {
-        const dx = e.changedTouches[0].clientX - tx0;
-        if (Math.abs(dx) > 40) goTo(cur + (dx < 0 ? 1 : -1));
-      }, { passive: true });
-      carouselEl.querySelectorAll('img').forEach((img, i) => {
-        img.style.cursor = 'zoom-in';
-        img.addEventListener('click', () => openLightbox(images, i));
-      });
-    }
-  }
+  // Image grid → lightbox with arrows on tap
+  sheet.querySelectorAll('.post-image-thumb').forEach(thumb => {
+    thumb.addEventListener('click', () => openLightbox(images, parseInt(thumb.dataset.imgIdx) || 0));
+  });
 
   // Like inside sheet
   const likeBtn = sheet.querySelector('#pds-like-btn');

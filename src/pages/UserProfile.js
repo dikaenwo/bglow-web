@@ -7,38 +7,26 @@ function getAuthToken() {
 function getCurrentUserId() {
   try { return JSON.parse(localStorage.getItem('bglow_user') || '{}').id || null; } catch { return null; }
 }
-const authH = () => ({ Authorization: `Bearer ${getAuthToken()}` });
+const authH = () => {
+  const t = getAuthToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+};
 
-// Parse image_url: single string OR JSON array "[...]"
-function parseImageUrls(imageUrl) {
-  if (!imageUrl) return [];
-  if (imageUrl.startsWith('[')) {
-    try { return JSON.parse(imageUrl).map(u => `${API_BASE_URL}${u}`); } catch { return []; }
-  }
-  return [`${API_BASE_URL}${imageUrl}`];
+function parseImageUrls(u) {
+  if (!u) return [];
+  if (u.startsWith('[')) { try { return JSON.parse(u).map(x => `${API_BASE_URL}${x}`); } catch { return []; } }
+  return [`${API_BASE_URL}${u}`];
 }
-
 function timeAgo(iso) {
   if (!iso) return '';
   const d = Math.floor((Date.now() - new Date(iso)) / 1000);
   if (d < 60) return 'Baru saja';
-  if (d < 3600) return `${Math.floor(d / 60)} menit lalu`;
+  if (d < 3600) return `${Math.floor(d / 60)} mnt lalu`;
   if (d < 86400) return `${Math.floor(d / 3600)} jam lalu`;
-  if (d < 604800) return `${Math.floor(d / 86400)} hari lalu`;
-  return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  return `${Math.floor(d / 86400)} hari lalu`;
 }
 function initial(n) { return (n || '?').trim().charAt(0).toUpperCase(); }
-function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-
-const BACK = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
-
-// ── Skin type icons (same as Settings.js) ──────────────────────────────────
-const SKIN_TYPE_ICONS = {
-  Normal: `<svg viewBox="0 0 32 32" width="18" height="18" fill="none"><circle cx="16" cy="16" r="13" fill="#D1FAE5" stroke="#10B981" stroke-width="1.5"/><circle cx="16" cy="16" r="8" fill="#6EE7B7" opacity="0.5"/><path d="M11 20c1.5 2 3.5 3 5 3s3.5-1 5-3" stroke="#059669" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="14" r="1.5" fill="#059669"/><circle cx="20" cy="14" r="1.5" fill="#059669"/></svg>`,
-  Berminyak: `<svg viewBox="0 0 32 32" width="18" height="18" fill="none"><circle cx="16" cy="16" r="13" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/><circle cx="16" cy="16" r="8" fill="#93C5FD" opacity="0.4"/><path d="M11 20c1.5 1.5 3.5 2 5 2s3.5-.5 5-2" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="14" r="1.5" fill="#2563EB"/><circle cx="20" cy="14" r="1.5" fill="#2563EB"/><circle cx="8" cy="18" r="2" fill="#93C5FD" opacity="0.6"/><circle cx="24" cy="18" r="2" fill="#93C5FD" opacity="0.6"/><circle cx="16" cy="10" r="1.5" fill="#93C5FD" opacity="0.7"/></svg>`,
-  Kombinasi: `<svg viewBox="0 0 32 32" width="18" height="18" fill="none"><circle cx="16" cy="16" r="13" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="1.5"/><path d="M16 3a13 13 0 010 26" fill="#C4B5FD" opacity="0.5"/><path d="M16 3a13 13 0 000 26" fill="#DDD6FE" opacity="0.3"/><path d="M11 20c1.5 1.5 3.5 2 5 2s3.5-.5 5-2" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="14" r="1.5" fill="#7C3AED"/><circle cx="20" cy="14" r="1.5" fill="#7C3AED"/></svg>`,
-  Kering: `<svg viewBox="0 0 32 32" width="18" height="18" fill="none"><circle cx="16" cy="16" r="13" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/><circle cx="16" cy="16" r="8" fill="#FDE68A" opacity="0.4"/><path d="M12 19c1 1 2.5 1.5 4 1.5s3-.5 4-1.5" stroke="#B45309" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="14" r="1.5" fill="#B45309"/><circle cx="20" cy="14" r="1.5" fill="#B45309"/></svg>`,
-};
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
 const SKIN_TYPE_STYLE = {
   Normal:    { bg: '#D1FAE5', color: '#059669' },
@@ -46,17 +34,6 @@ const SKIN_TYPE_STYLE = {
   Kombinasi: { bg: '#EDE9FE', color: '#7C3AED' },
   Kering:    { bg: '#FEF3C7', color: '#B45309' },
 };
-
-// ── Skin problem icons (same as Settings.js) ──────────────────────────────
-const PROBLEM_ICONS = {
-  Jerawat: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><circle cx="12" cy="12" r="10" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.5"/><circle cx="9" cy="10" r="2" fill="#FCA5A5" stroke="#EF4444" stroke-width="1"/><circle cx="15" cy="9" r="1.5" fill="#FCA5A5" stroke="#EF4444" stroke-width="1"/><circle cx="13" cy="15" r="2.5" fill="#FCA5A5" stroke="#EF4444" stroke-width="1"/></svg>`,
-  PIE: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><circle cx="12" cy="12" r="10" fill="#FCE7F3" stroke="#EC4899" stroke-width="1.5"/><circle cx="9" cy="10" r="2.5" fill="none" stroke="#EC4899" stroke-width="1.2" stroke-dasharray="1.5 1.5"/><circle cx="15" cy="14" r="2" fill="none" stroke="#EC4899" stroke-width="1.2" stroke-dasharray="1.5 1.5"/><circle cx="12" cy="8" r="1.5" fill="#F9A8D4" opacity="0.6"/></svg>`,
-  PIH: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><circle cx="12" cy="12" r="10" fill="#FFF7ED" stroke="#F97316" stroke-width="1.5"/><ellipse cx="9" cy="10" rx="2.5" ry="2" fill="#FDBA74" stroke="#F97316" stroke-width="1"/><ellipse cx="15" cy="14" rx="2" ry="1.5" fill="#FDBA74" stroke="#F97316" stroke-width="1"/></svg>`,
-  Kemerahan: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><circle cx="12" cy="12" r="10" fill="#DCFCE7" stroke="#22C55E" stroke-width="1.5"/><circle cx="8" cy="13" r="2.5" fill="#FCA5A5" opacity="0.5"/><circle cx="16" cy="13" r="2.5" fill="#FCA5A5" opacity="0.5"/></svg>`,
-  Hiperpigmentasi: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><circle cx="12" cy="12" r="10" fill="#FEF9C3" stroke="#EAB308" stroke-width="1.5"/><rect x="7" y="13" width="4" height="3" rx="1" fill="#CA8A04" opacity="0.3"/><rect x="13" y="11" width="3" height="4" rx="1" fill="#CA8A04" opacity="0.25"/></svg>`,
-  Aging: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><circle cx="12" cy="12" r="10" fill="#F3E8FF" stroke="#8B5CF6" stroke-width="1.5"/><path d="M8 9c0-1 1-2 2-2M14 9c0-1 1-2 2-2" stroke="#8B5CF6" stroke-width="1" stroke-linecap="round"/><path d="M9 14c.8 1.2 1.8 1.8 3 1.8s2.2-.6 3-1.8" stroke="#8B5CF6" stroke-width="1" stroke-linecap="round"/></svg>`,
-};
-
 const PROBLEM_STYLE = {
   Jerawat:         { bg: '#FEE2E2', color: '#DC2626' },
   PIE:             { bg: '#FCE7F3', color: '#DB2777' },
@@ -66,188 +43,238 @@ const PROBLEM_STYLE = {
   Aging:           { bg: '#F3E8FF', color: '#7C3AED' },
 };
 
-function skinTypeBadge(type) {
-  const st = SKIN_TYPE_STYLE[type] || { bg: '#f0f2f5', color: '#374151' };
-  const icon = SKIN_TYPE_ICONS[type] || '';
-  return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;background:${st.bg};color:${st.color}">${icon}${esc(type)}</span>`;
-}
-
-function problemChip(label) {
-  const ps = PROBLEM_STYLE[label] || { bg: '#f0f2f5', color: '#374151' };
-  const icon = PROBLEM_ICONS[label] || '';
-  return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:4px 11px;border-radius:20px;background:${ps.bg};color:${ps.color}">${icon}${esc(label)}</span>`;
-}
-
 export function renderUserProfile(userId) {
   const myId = getCurrentUserId();
   const isOwnProfile = String(myId) === String(userId);
 
   const page = document.createElement('div');
-  page.style.cssText = 'min-height:100vh;background:#f0f2f5;display:flex;flex-direction:column';
+  page.className = 'page';
+  page.style.background = '#f8fafc';
 
-  // ── Sticky header ──
-  const header = document.createElement('div');
-  header.style.cssText = 'position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.95);backdrop-filter:blur(16px);border-bottom:1px solid #e4e6ea;display:flex;align-items:center;gap:12px;padding:12px 16px';
-  header.innerHTML = `
-    <button id="up-back" style="background:#f2f2f2;border:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#050505;flex-shrink:0">${BACK}</button>
-    <span id="up-header-name" style="font-size:17px;font-weight:800;color:#050505">Profil</span>
+  // ── Scoped CSS ──
+  const styleEl = document.createElement('style');
+  styleEl.textContent = `
+    .up-banner { height:130px; background:linear-gradient(135deg,#0ea5e9 0%,#2563eb 45%,#7c3aed 100%); position:relative; background-size:cover; background-position:center; }
+    .up-topbar { position:absolute;top:0;left:0;right:0;display:flex;align-items:center;padding:12px 14px;z-index:2; }
+    .up-back-btn { width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,0.35);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;backdrop-filter:blur(4px); }
+    .up-header-name { color:#fff;font-size:16px;font-weight:800;margin-left:10px;text-shadow:0 1px 4px rgba(0,0,0,0.3); }
+    .up-avatar-wrap { position:absolute;bottom:-38px;left:16px;z-index:3; }
+    .up-avatar { width:78px;height:78px;border-radius:50%;background:linear-gradient(135deg,#0ea5e9,#7c3aed);border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff;overflow:hidden; }
+    .up-info { background:#fff;padding:52px 16px 16px;border-bottom:1px solid #f0f2f5; }
+    .up-name { font-size:19px;font-weight:800;color:#050505; }
+    .up-stats { display:flex;gap:20px;margin-top:12px; }
+    .up-stat strong { font-size:14px;font-weight:800;color:#050505; }
+    .up-stat span { font-size:13px;color:#65676b;margin-left:3px; }
+    .up-badges { display:flex;flex-wrap:wrap;gap:6px;margin-top:10px; }
+    .up-badge { display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:4px 11px;border-radius:20px; }
+    .up-follow-btn { margin-top:12px;padding:8px 28px;border-radius:20px;border:none;font-size:14px;font-weight:700;cursor:pointer;background:#1877f2;color:#fff;transition:all 0.2s; }
+    .up-follow-btn.following { background:#fff;color:#050505;border:1.5px solid #dbdbdb; }
+    .up-tabs { display:flex;background:#fff;border-bottom:1px solid #f0f2f5;margin-top:8px; }
+    .up-tab { flex:1;padding:13px 0;border:none;background:none;font-size:14px;cursor:pointer;transition:all 0.2s; }
+    .up-card { display:flex;gap:10px;padding:14px 16px;border-bottom:1px solid #f0f2f5;background:#fff;cursor:pointer;transition:background 0.15s; }
+    .up-card:hover { background:#f9fafb; }
   `;
-  header.querySelector('#up-back').addEventListener('click', () => history.back());
-  page.appendChild(header);
+  page.appendChild(styleEl);
 
-  const body = document.createElement('div');
-  body.style.cssText = 'flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch';
-  body.innerHTML = `
-    <div style="background:#fff;padding:24px 16px;margin-bottom:8px;display:flex;flex-direction:column;align-items:center;gap:12px">
-      <div style="width:80px;height:80px;border-radius:50%;background:#e4e6ea;animation:shimmer 1.5s infinite"></div>
-      <div style="height:16px;width:40%;background:#e4e6ea;border-radius:8px;animation:shimmer 1.5s infinite"></div>
-    </div>
-  `;
-  page.appendChild(body);
+  // Shimmer placeholder
+  const shimmer = document.createElement('div');
+  shimmer.innerHTML = `
+    <div class="up-banner" style="animation:shimmer 1.5s infinite"></div>
+    <div style="background:#fff;padding:52px 16px 20px">
+      <div style="height:20px;width:45%;background:#e4e6ea;border-radius:8px;animation:shimmer 1.5s infinite;margin-bottom:8px"></div>
+      <div style="height:14px;width:30%;background:#e4e6ea;border-radius:8px;animation:shimmer 1.5s infinite"></div>
+    </div>`;
+  page.appendChild(shimmer);
 
+  // ── Fetch profile ──
   (async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/users/${userId}/profile`, { headers: authH() });
-      if (!res.ok) { body.innerHTML = '<div style="text-align:center;padding:48px;color:#65676b">Pengguna tidak ditemukan</div>'; return; }
+      if (!res.ok) { page.innerHTML = '<div style="text-align:center;padding:48px;color:#65676b">Pengguna tidak ditemukan</div>'; return; }
       const data = await res.json();
-      const user = data.user;
-
-      header.querySelector('#up-header-name').textContent = user.name || 'Profil';
-
+      const user = data.user || {};
       let isFollowing = data.is_following || false;
       let followerCount = data.follower_count || 0;
 
-      // Parse skin problems from user data (not in API currently, will show what's available)
-      const skinProblems = [];
-      if (user.acne_level && user.acne_level !== 'Bersih') skinProblems.push('Jerawat');
+      shimmer.remove();
 
-      body.innerHTML = `
-        <div style="background:#fff;margin-bottom:8px">
-          <!-- Avatar + name -->
-          <div style="padding:28px 16px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;border-bottom:1px solid #f0f2f5">
-            <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:#fff;box-shadow:0 4px 16px rgba(24,119,242,0.25)">
-              ${initial(user.name)}
-            </div>
-            <div style="text-align:center">
-              <div style="font-size:20px;font-weight:800;color:#050505;margin-bottom:6px">${esc(user.name || 'Pengguna')}</div>
-              <!-- Skin badge (own profile) OR Follow button (others) -->
-              ${isOwnProfile && user.skin_type
-                ? skinTypeBadge(user.skin_type)
-                : !isOwnProfile
-                  ? `<button id="up-follow-btn" style="
-                      padding:7px 22px;border-radius:20px;font-size:13px;font-weight:700;
-                      cursor:pointer;border:${isFollowing ? '1.5px solid #ccc' : 'none'};
-                      background:${isFollowing ? '#fff' : '#1877f2'};
-                      color:${isFollowing ? '#050505' : '#fff'};
-                      transition:all 0.2s;min-width:100px"
-                    >${isFollowing ? 'Following' : '+ Follow'}</button>`
-                  : ''}
-            </div>
-            <!-- Stats -->
-            <div style="display:flex;gap:32px;margin-top:4px">
-              <div style="text-align:center">
-                <div style="font-size:20px;font-weight:800;color:#050505">${data.post_count || 0}</div>
-                <div style="font-size:12px;color:#65676b;font-weight:500">Post</div>
-              </div>
-              <div style="text-align:center">
-                <div id="up-follower-count" style="font-size:20px;font-weight:800;color:#050505">${followerCount}</div>
-                <div style="font-size:12px;color:#65676b;font-weight:500">Followers</div>
-              </div>
-              <div style="text-align:center">
-                <div style="font-size:20px;font-weight:800;color:#050505">${data.following_count || 0}</div>
-                <div style="font-size:12px;color:#65676b;font-weight:500">Following</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Skin Profile section -->
-          ${user.skin_type ? `
-          <div style="padding:14px 16px">
-            <div style="font-size:13px;font-weight:700;color:#65676b;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.3px">Skin Profile</div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px">
-              ${skinTypeBadge(user.skin_type)}
-              ${(user.skin_problems || '').split(',').filter(p => p.trim()).map(p => problemChip(p.trim())).join('')}
-            </div>
-          </div>` : ''}
+      // ── Banner ──
+      const bannerEl = document.createElement('div');
+      bannerEl.className = 'up-banner';
+      if (user.cover_photo) bannerEl.style.backgroundImage = `url(${API_BASE_URL}${user.cover_photo})`;
+      bannerEl.innerHTML = `
+        <div class="up-topbar">
+          <button class="up-back-btn" id="up-back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="up-header-name">${esc(user.name || 'Profil')}</span>
         </div>
+        <div class="up-avatar-wrap">
+          <div class="up-avatar" id="up-avatar">
+            ${user.profile_photo
+              ? `<img src="${API_BASE_URL}${user.profile_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />`
+              : initial(user.name)
+            }
+          </div>
+        </div>`;
+      bannerEl.querySelector('#up-back').addEventListener('click', () => history.back());
+      page.appendChild(bannerEl);
 
-        <!-- Posts section -->
-        <div style="background:#fff;padding:14px 0">
-          <div style="font-size:15px;font-weight:800;color:#050505;padding:0 16px 12px;border-bottom:1px solid #e4e6ea">
-            Post dari ${esc(user.name || 'Pengguna')}
-          </div>
-          <div id="up-posts-list">
-            ${data.posts.length === 0 ? '<div style="text-align:center;padding:32px;color:#65676b;font-size:13.5px">Belum ada post</div>' : ''}
-          </div>
+      // ── Info block ──
+      const st = SKIN_TYPE_STYLE[user.skin_type] || { bg: '#EFF6FF', c: '#1D4ED8' };
+      const sp = (user.skin_problems || '').split(',').filter(p => p.trim());
+
+      const infoEl = document.createElement('div');
+      infoEl.className = 'up-info';
+      infoEl.innerHTML = `
+        <div class="up-name">${esc(user.name || 'Pengguna')}</div>
+        <div class="up-badges" id="up-badges">
+          ${user.skin_type ? `<span class="up-badge" style="background:${st.bg};color:${st.color}">${esc(user.skin_type)}</span>` : ''}
+          ${sp.map(p => { const c = PROBLEM_STYLE[p] || { bg: '#F3F4F6', color: '#374151' }; return `<span class="up-badge" style="background:${c.bg};color:${c.color}">${esc(p)}</span>`; }).join('')}
         </div>
-      `;
+        <div class="up-stats">
+          <div class="up-stat"><strong>${data.post_count ?? 0}</strong><span>Post</span></div>
+          <div class="up-stat"><strong id="up-follower-count">${followerCount}</strong><span>Pengikut</span></div>
+          <div class="up-stat"><strong>${data.following_count ?? 0}</strong><span>Mengikuti</span></div>
+        </div>
+        ${!isOwnProfile
+          ? `<button class="up-follow-btn ${isFollowing ? 'following' : ''}" id="up-follow-btn">${isFollowing ? 'Mengikuti' : '+ Ikuti'}</button>`
+          : `<button class="up-follow-btn" style="background:#fff;color:#050505;border:1.5px solid #dbdbdb" onclick="location.hash='#/profile'">Lihat Profil Saya</button>`
+        }`;
+      page.appendChild(infoEl);
 
-      // ── Follow button handler ──
-      if (!isOwnProfile) {
-        const followBtn = body.querySelector('#up-follow-btn');
-        const followerEl = body.querySelector('#up-follower-count');
-        followBtn?.addEventListener('click', async () => {
+      // Follow handler
+      const followBtn = infoEl.querySelector('#up-follow-btn');
+      const followerEl = infoEl.querySelector('#up-follower-count');
+      if (followBtn && !isOwnProfile) {
+        followBtn.addEventListener('click', async () => {
           const prev = isFollowing;
           isFollowing = !isFollowing;
           followerCount += isFollowing ? 1 : -1;
-          followBtn.textContent = isFollowing ? 'Following' : '+ Follow';
-          followBtn.style.background = isFollowing ? '#fff' : '#1877f2';
-          followBtn.style.color = isFollowing ? '#050505' : '#fff';
-          followBtn.style.border = isFollowing ? '1.5px solid #ccc' : 'none';
+          followBtn.textContent = isFollowing ? 'Mengikuti' : '+ Ikuti';
+          followBtn.className = `up-follow-btn${isFollowing ? ' following' : ''}`;
           if (followerEl) followerEl.textContent = followerCount;
           try {
             const r = await fetch(`${API_BASE_URL}/api/users/${userId}/follow`, { method: 'POST', headers: authH() });
             const d = await r.json();
-            followerCount = d.follower_count;
             isFollowing = d.following;
+            followerCount = d.follower_count;
+            followBtn.textContent = isFollowing ? 'Mengikuti' : '+ Ikuti';
+            followBtn.className = `up-follow-btn${isFollowing ? ' following' : ''}`;
             if (followerEl) followerEl.textContent = followerCount;
-            followBtn.textContent = isFollowing ? 'Following' : '+ Follow';
           } catch {
-            isFollowing = prev;
-            followerCount += isFollowing ? 1 : -1;
-            followBtn.textContent = isFollowing ? 'Following' : '+ Follow';
+            isFollowing = prev; followerCount += isFollowing ? 1 : -1;
+            followBtn.textContent = isFollowing ? 'Mengikuti' : '+ Ikuti';
+            followBtn.className = `up-follow-btn${isFollowing ? ' following' : ''}`;
           }
         });
       }
 
-      // ── Render posts ──
-      const postsList = body.querySelector('#up-posts-list');
-      data.posts.forEach(p => {
-        const item = document.createElement('div');
-        item.style.cssText = 'border-bottom:1px solid #f0f2f5;padding:14px 16px;cursor:pointer;transition:background 0.15s';
-        item.addEventListener('mouseover', () => item.style.background = '#f9f9f9');
-        item.addEventListener('mouseout',  () => item.style.background = '');
-        item.addEventListener('click', () => { window.location.hash = `#/post/${p.id}`; });
+      // ── Tabs ──
+      const tabsEl = document.createElement('div');
+      tabsEl.className = 'up-tabs';
+      tabsEl.innerHTML = `
+        <button class="up-tab" id="up-tab-posts" style="font-weight:700;color:#1877f2;border-bottom:3px solid #1877f2">Post</button>
+        <button class="up-tab" id="up-tab-liked" style="font-weight:600;color:#65676b;border-bottom:3px solid transparent">Suka</button>`;
+      page.appendChild(tabsEl);
 
-        const postImgs = parseImageUrls(p.image_url);
-        const imageHtml = postImgs.length > 0 ? `
-          <div style="margin:8px 0;border-radius:12px;overflow:hidden">
-            ${postImgs.length === 1
-              ? `<img src="${postImgs[0]}" style="width:100%;object-fit:cover;display:block;max-height:220px;border-radius:12px" loading="lazy" />`
-              : `<div style="display:grid;grid-template-columns:repeat(${Math.min(postImgs.length,3)},1fr);gap:3px">${postImgs.slice(0,3).map(u => `<img src="${u}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block" loading="lazy" />`).join('')}</div>`
+      const tabContent = document.createElement('div');
+      page.appendChild(tabContent);
+
+      // ── Post card renderer ──
+      function renderCard(p) {
+        const imgs = parseImageUrls(p.image_url);
+        const card = document.createElement('div');
+        card.className = 'up-card';
+        const av = initial(p.user_name || user.name);
+        const imgHtml = imgs.length > 0 ? `
+          <div style="margin-top:10px;border-radius:12px;overflow:hidden;border:1px solid #f0f2f5">
+            ${imgs.length === 1
+              ? `<img src="${imgs[0]}" style="width:100%;max-height:260px;object-fit:cover;display:block" loading="lazy"/>`
+              : `<div style="display:grid;grid-template-columns:repeat(${Math.min(imgs.length, 3)},1fr);gap:2px">${imgs.slice(0, 3).map(u => `<img src="${u}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block" loading="lazy"/>`).join('')}</div>`
             }
           </div>` : '';
 
-        item.innerHTML = `
-          ${p.content ? `<div style="font-size:14px;color:#050505;line-height:1.55;word-break:break-word;white-space:pre-wrap;margin-bottom:6px">${esc(p.content)}</div>` : ''}
-          ${imageHtml}
-          <div style="display:flex;gap:12px;font-size:12px;color:#65676b;margin-top:6px;align-items:center">
-            <span style="display:flex;align-items:center;gap:3px">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="#e41e3f"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-              ${p.like_count || 0}
-            </span>
-            <span style="display:flex;align-items:center;gap:3px">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#65676b" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-              ${p.comment_count || 0}
-            </span>
-            <span style="margin-left:auto;font-size:11px" data-created-at="${p.created_at}">${timeAgo(p.created_at)}</span>
+        // For post tab: use user's actual avatar if available
+        const avatarHtml = user.profile_photo
+          ? `<img src="${API_BASE_URL}${user.profile_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`
+          : av;
+        const avatarBg = user.profile_photo ? 'none' : 'linear-gradient(135deg,#1877f2,#0ea5e9)';
+
+        card.innerHTML = `
+          <div style="width:40px;height:40px;border-radius:50%;background:${avatarBg};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden">
+            ${avatarHtml}
           </div>
-        `;
-        postsList.appendChild(item);
-      });
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span style="font-size:14px;font-weight:700;color:#050505">${esc(user.name || 'Pengguna')}</span>
+              ${user.skin_type ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:${st.bg};color:${st.color};font-weight:600">${esc(user.skin_type)}</span>` : ''}
+              <span style="font-size:12px;color:#65676b;margin-left:auto">${timeAgo(p.created_at)}</span>
+            </div>
+            ${p.content ? `<div style="font-size:14px;color:#050505;margin-top:5px;line-height:1.55;word-break:break-word;white-space:pre-wrap">${esc(p.content)}</div>` : ''}
+            ${imgHtml}
+            <div style="display:flex;gap:18px;margin-top:10px;color:#65676b;font-size:13px">
+              <span style="display:flex;align-items:center;gap:4px">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="#e03131" stroke="#e03131" stroke-width="2"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                ${p.like_count || 0}
+              </span>
+              <span style="display:flex;align-items:center;gap:4px">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#65676b" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                ${p.comment_count || 0}
+              </span>
+            </div>
+          </div>`;
+        card.addEventListener('click', () => { window.location.hash = `#/post/${p.id}`; });
+        return card;
+      }
+
+      // ── Load tab data ──
+      async function loadTab(tab) {
+        tabContent.innerHTML = `<div style="text-align:center;padding:32px;color:#65676b;font-size:14px">Memuat…</div>`;
+        try {
+          let posts = [];
+          if (tab === 'posts') {
+            // Use already-fetched posts from profile API
+            posts = data.posts || [];
+          } else {
+            // Liked posts: only available for own profile
+            if (!isOwnProfile) {
+              tabContent.innerHTML = `<div style="text-align:center;padding:48px;color:#65676b;font-size:14px">Tab ini hanya untuk profil sendiri</div>`;
+              return;
+            }
+            const r = await fetch(`${API_BASE_URL}/api/users/me/liked`, { headers: authH() });
+            const d = await r.json();
+            posts = d.posts || [];
+          }
+          tabContent.innerHTML = '';
+          if (posts.length === 0) {
+            tabContent.innerHTML = `<div style="text-align:center;padding:48px;color:#65676b;font-size:14px">Belum ada post</div>`;
+            return;
+          }
+          posts.forEach(p => tabContent.appendChild(renderCard(p)));
+        } catch {
+          tabContent.innerHTML = `<div style="text-align:center;padding:32px;color:#e03131;font-size:13px">Gagal memuat postingan</div>`;
+        }
+      }
+
+      function switchTab(tab) {
+        const tp = tabsEl.querySelector('#up-tab-posts');
+        const tl = tabsEl.querySelector('#up-tab-liked');
+        tp.style.color = tab === 'posts' ? '#1877f2' : '#65676b';
+        tp.style.fontWeight = tab === 'posts' ? '700' : '600';
+        tp.style.borderBottom = tab === 'posts' ? '3px solid #1877f2' : '3px solid transparent';
+        tl.style.color = tab === 'liked' ? '#1877f2' : '#65676b';
+        tl.style.fontWeight = tab === 'liked' ? '700' : '600';
+        tl.style.borderBottom = tab === 'liked' ? '3px solid #1877f2' : '3px solid transparent';
+        loadTab(tab);
+      }
+
+      tabsEl.querySelector('#up-tab-posts')?.addEventListener('click', () => switchTab('posts'));
+      tabsEl.querySelector('#up-tab-liked')?.addEventListener('click', () => switchTab('liked'));
+      loadTab('posts');
 
     } catch (err) {
-      body.innerHTML = `<div style="text-align:center;padding:48px;color:#65676b">Gagal memuat profil<br><small>${err.message}</small></div>`;
+      page.innerHTML = `<div style="text-align:center;padding:48px;color:#65676b">Gagal memuat profil<br><small>${err.message}</small></div>`;
     }
   })();
 

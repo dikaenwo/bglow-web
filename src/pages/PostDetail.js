@@ -57,7 +57,7 @@ function buildCommentEl(c, { onReply, onLike, isReply = false, topLevelId = null
 
   // ── Row: avatar + bubble ──
   const row = document.createElement('div');
-  row.style.cssText = `display:flex; gap:8px; ${isReply ? 'margin-left:42px;' : ''}`;
+  row.style.cssText = `display:flex; gap:8px; ${isReply ? 'margin-left:0;' : ''}`;
 
   row.innerHTML = `
     <div style="width:${avatarSize}px;height:${avatarSize}px;border-radius:50%;
@@ -100,7 +100,7 @@ function buildCommentEl(c, { onReply, onLike, isReply = false, topLevelId = null
   // ── Replies container — sits BELOW the row, indented 42px (avatar width + gap) ──
   const repliesContainer = document.createElement('div');
   repliesContainer.className = 'replies-container';
-  repliesContainer.style.cssText = isReply ? '' : 'margin-left:42px; margin-top:6px;';
+  repliesContainer.style.cssText = isReply ? '' : 'margin-left:0; margin-top:6px;';
 
   wrapper.appendChild(row);
   if (!isReply) wrapper.appendChild(repliesContainer);

@@ -1,269 +1,332 @@
 import { icons } from '../components/BottomNav.js';
-import { getStreak, getUserId, getAuthHeaders, isPremium, getSubscriptionPlan } from '../utils/store.js';
-import { showCustomAlert } from '../utils/helpers.js';
+import { getStreak, getUserId, getAuthHeaders, isPremium } from '../utils/store.js';
 import { API_BASE_URL } from '../config.js';
 import { renderMyPosts } from './Feed.js';
 
-function getScanCount() {
-  const val = localStorage.getItem('bglow_scan_count_' + getUserId());
-  return val ? parseInt(val) : 0;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
 }
 
-function getSkinScore() {
-  const key = 'bglow_diary_entries_' + getUserId();
-  const data = localStorage.getItem(key);
-  if (!data) return 0;
-  try {
-    const entries = JSON.parse(data);
-    if (!entries || entries.length === 0) return 0;
+function initial(name) {
+  return (name || 'U').charAt(0).toUpperCase();
+}
 
-    // Calculate score based on diary condition entries
-    let totalScore = 0;
-    const recentEntries = entries.slice(0, 10); // last 10 entries
-    recentEntries.forEach(entry => {
-      if (!entry.conditions || entry.conditions.length === 0) {
-        totalScore += 50; // neutral
-        return;
-      }
-      let entryScore = 50;
-      entry.conditions.forEach(c => {
-        if (c.type === 'good') entryScore += 15;
-        else if (c.type === 'warn') entryScore -= 5;
-        else if (c.type === 'bad') entryScore -= 15;
-      });
-      totalScore += Math.max(0, Math.min(100, entryScore));
-    });
-    return Math.round(totalScore / recentEntries.length);
-  } catch (e) {
-    return 0;
+function parseImageUrls(imageUrl) {
+  if (!imageUrl) return [];
+  if (imageUrl.startsWith('[')) {
+    try { return JSON.parse(imageUrl).map(u => `${API_BASE_URL}${u}`); } catch { return []; }
   }
+  return [`${API_BASE_URL}${imageUrl}`];
 }
+
+// ─── Skin profile icons (same as Settings.js) ────────────────────────────────
+
+const SKIN_TYPE_ICONS = {
+  Berminyak: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M12 2C7 2 3 6 3 11c0 3.5 2 6.5 5 8.2V21h8v-1.8c3-1.7 5-4.7 5-8.2 0-5-4-9-9-9z" fill="#3B82F6" opacity="0.3" stroke="#2563EB" stroke-width="1.5"/><path d="M8 14c1 1.5 2 2 4 2s3-.5 4-2" stroke="#2563EB" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>`,
+  Normal:    `<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><circle cx="12" cy="12" r="9" fill="#D1FAE5" stroke="#10B981" stroke-width="1.5"/><path d="M8 12c1 2 2.5 3 4 3s3-1 4-3" stroke="#10B981" stroke-width="1.5" fill="none" stroke-linecap="round"/><circle cx="9" cy="9.5" r="1" fill="#10B981"/><circle cx="15" cy="9.5" r="1" fill="#10B981"/></svg>`,
+  Kombinasi: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><circle cx="12" cy="12" r="9" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5"/><path d="M12 3v9" stroke="#F59E0B" stroke-width="1.5"/><path d="M8 14c1 1.5 2 2 4 2s3-.5 4-2" stroke="#F59E0B" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>`,
+  Kering:    `<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><circle cx="12" cy="12" r="9" fill="#FEE2E2" stroke="#F87171" stroke-width="1.5"/><path d="M8 13c1-1 2-1.5 4-1.5s3 .5 4 1.5" stroke="#F87171" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M9 8l1 2M14 8l1 2" stroke="#F87171" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+};
+
+const PROBLEM_COLORS = {
+  Jerawat:        { bg: '#FEE2E2', color: '#DC2626' },
+  PIE:            { bg: '#FCE7F3', color: '#DB2777' },
+  PIH:            { bg: '#FDF4FF', color: '#9333EA' },
+  Kemerahan:      { bg: '#FFF0F0', color: '#EF4444' },
+  Hiperpigmentasi:{ bg: '#FFF7ED', color: '#EA580C' },
+  Aging:          { bg: '#F5F3FF', color: '#7C3AED' },
+};
+
+function skinTypeBadge(type) {
+  if (!type) return '';
+  const icon = SKIN_TYPE_ICONS[type] || '';
+  const c = type === 'Berminyak' ? { bg:'#EFF6FF', color:'#1D4ED8' }
+          : type === 'Normal'    ? { bg:'#ECFDF5', color:'#065F46' }
+          : type === 'Kombinasi' ? { bg:'#FFFBEB', color:'#92400E' }
+          : type === 'Kering'    ? { bg:'#FEF2F2', color:'#991B1B' }
+          : { bg:'#F3F4F6', color:'#374151' };
+  return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 11px;border-radius:20px;background:${c.bg};color:${c.color}">${icon}${esc(type)}</span>`;
+}
+
+function problemChip(label) {
+  const c = PROBLEM_COLORS[label] || { bg:'#F3F4F6', color:'#374151' };
+  return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 11px;border-radius:20px;background:${c.bg};color:${c.color}">${esc(label)}</span>`;
+}
+
+// ─── Settings drawer ─────────────────────────────────────────────────────────
+
+function openSettingsDrawer() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:1000;';
+
+  const drawer = document.createElement('div');
+  drawer.style.cssText = `
+    position:fixed;top:0;right:0;bottom:0;width:82%;max-width:320px;
+    background:#fff;z-index:1001;
+    box-shadow:-4px 0 24px rgba(0,0,0,0.15);
+    display:flex;flex-direction:column;
+    transform:translateX(100%);transition:transform 0.28s cubic-bezier(.4,0,.2,1);
+  `;
+
+  const isPrem = isPremium();
+
+  drawer.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px 12px;border-bottom:1px solid #f0f2f5">
+      <span style="font-size:17px;font-weight:800;color:#050505">Pengaturan</span>
+      <button id="drawer-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#65676b;width:32px;height:32px;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:8px 0">
+
+      <!-- Akun -->
+      <div style="padding:10px 16px 4px;font-size:11px;font-weight:700;color:#65676b;text-transform:uppercase;letter-spacing:0.5px">Akun</div>
+      <div class="dr-item" id="dr-edit-profil">
+        <div class="dr-icon" style="background:#EFF6FF">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563EB" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <span>Edit Profil</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#c0c0c0" stroke-width="2" class="dr-chevron"><polyline points="9,18 15,12 9,6"/></svg>
+      </div>
+      ${!isPrem ? `
+      <div class="dr-item" id="dr-upgrade">
+        <div class="dr-icon" style="background:#FFF7ED">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#EA580C" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z" fill="#FDBA74"/></svg>
+        </div>
+        <span>Upgrade ke Glow Plus</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#c0c0c0" stroke-width="2" class="dr-chevron"><polyline points="9,18 15,12 9,6"/></svg>
+      </div>` : ''}
+
+      <!-- Akses Cepat -->
+      <div style="padding:14px 16px 4px;font-size:11px;font-weight:700;color:#65676b;text-transform:uppercase;letter-spacing:0.5px">Akses Cepat</div>
+      <div class="dr-item" id="dr-bpom">
+        <div class="dr-icon" style="background:#ECFDF5">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#059669" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <span>Cek BPOM Produk</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#c0c0c0" stroke-width="2" class="dr-chevron"><polyline points="9,18 15,12 9,6"/></svg>
+      </div>
+      <div class="dr-item" id="dr-alarm">
+        <div class="dr-icon" style="background:#FFFBEB">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#D97706" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+        </div>
+        <span>Alarm Sunscreen</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#c0c0c0" stroke-width="2" class="dr-chevron"><polyline points="9,18 15,12 9,6"/></svg>
+      </div>
+      <div class="dr-item" id="dr-diary">
+        <div class="dr-icon" style="background:#F5F3FF">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        </div>
+        <span>Diary Kulit</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#c0c0c0" stroke-width="2" class="dr-chevron"><polyline points="9,18 15,12 9,6"/></svg>
+      </div>
+
+      <!-- Perawatan Kulit -->
+      <div style="padding:14px 16px 4px;font-size:11px;font-weight:700;color:#65676b;text-transform:uppercase;letter-spacing:0.5px">Perawatan Kulit</div>
+      <div class="dr-item" id="dr-scan-history">
+        <div class="dr-icon" style="background:#EFF6FF">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563EB" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </div>
+        <span>Riwayat Scan</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#c0c0c0" stroke-width="2" class="dr-chevron"><polyline points="9,18 15,12 9,6"/></svg>
+      </div>
+      <div class="dr-item" id="dr-favorites">
+        <div class="dr-icon" style="background:#FEF2F2">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#DC2626" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        </div>
+        <span>Produk Favorit</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#c0c0c0" stroke-width="2" class="dr-chevron"><polyline points="9,18 15,12 9,6"/></svg>
+      </div>
+      <div class="dr-item" id="dr-settings">
+        <div class="dr-icon" style="background:#F3F4F6">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#6B7280" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </div>
+        <span>Pengaturan Akun</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#c0c0c0" stroke-width="2" class="dr-chevron"><polyline points="9,18 15,12 9,6"/></svg>
+      </div>
+
+      <!-- Lainnya -->
+      <div style="padding:14px 16px 4px;font-size:11px;font-weight:700;color:#65676b;text-transform:uppercase;letter-spacing:0.5px">Lainnya</div>
+      <div class="dr-item" id="dr-logout" style="color:#DC2626">
+        <div class="dr-icon" style="background:#FEF2F2">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#DC2626" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </div>
+        <span style="color:#DC2626">Keluar</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#DC2626" stroke-width="2" class="dr-chevron"><polyline points="9,18 15,12 9,6"/></svg>
+      </div>
+
+      <div style="padding:20px 16px;font-size:11px;color:#bbb;text-align:center">B-Glow v2.0.0</div>
+    </div>
+  `;
+
+  // Inline styles for dr-item
+  const style = document.createElement('style');
+  style.textContent = `
+    .dr-item { display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;transition:background 0.15s; }
+    .dr-item:hover { background:#f9fafb; }
+    .dr-item span { flex:1;font-size:14.5px;font-weight:500;color:#050505; }
+    .dr-icon { width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .dr-chevron { flex-shrink:0; }
+  `;
+  drawer.prepend(style);
+
+  overlay.appendChild(drawer);
+  document.body.appendChild(overlay);
+
+  // Animate in
+  requestAnimationFrame(() => { drawer.style.transform = 'translateX(0)'; });
+
+  const close = () => {
+    drawer.style.transform = 'translateX(100%)';
+    setTimeout(() => overlay.remove(), 280);
+  };
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  drawer.querySelector('#drawer-close').addEventListener('click', close);
+
+  // Navigation
+  const nav = (hash) => { close(); setTimeout(() => { window.location.hash = hash; }, 80); };
+  drawer.querySelector('#dr-edit-profil')?.addEventListener('click', () => nav('#/settings'));
+  drawer.querySelector('#dr-upgrade')?.addEventListener('click', () => nav('#/subscription'));
+  drawer.querySelector('#dr-bpom')?.addEventListener('click', () => nav('#/bpom'));
+  drawer.querySelector('#dr-alarm')?.addEventListener('click', () => nav('#/alarm'));
+  drawer.querySelector('#dr-diary')?.addEventListener('click', () => nav('#/diary'));
+  drawer.querySelector('#dr-scan-history')?.addEventListener('click', () => nav('#/scan-history'));
+  drawer.querySelector('#dr-favorites')?.addEventListener('click', () => nav('#/favorites'));
+  drawer.querySelector('#dr-settings')?.addEventListener('click', () => nav('#/settings'));
+  drawer.querySelector('#dr-logout')?.addEventListener('click', () => {
+    close();
+    setTimeout(() => {
+      localStorage.clear();
+      window.location.hash = '#/login';
+    }, 80);
+  });
+}
+
+// ─── Main render ─────────────────────────────────────────────────────────────
 
 export function renderProfile() {
   const page = document.createElement('div');
   page.className = 'page';
 
-  let userName = 'Pengguna B-Glow';
-  let userEmail = 'user@bglow.app';
-  let userInitial = 'B';
-
+  const userId  = getUserId();
   const userStr = localStorage.getItem('bglow_user');
-  if (userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      if (user && user.name) {
-        userName = user.name;
-        userInitial = user.name.charAt(0).toUpperCase();
-      }
-      if (user && user.email) {
-        userEmail = user.email;
-      }
-    } catch (e) {}
-  }
+  let userName  = 'Pengguna B-Glow';
+  let userEmail = '';
+  try {
+    const u = JSON.parse(userStr || '{}');
+    if (u.name) userName = u.name;
+    if (u.email) userEmail = u.email;
+  } catch {}
 
-  // Dynamic stats from real data
-  const streakData = getStreak();
-  const skinScore = getSkinScore();
-  const scanCount = getScanCount();
-  const streakCount = streakData.current;
-
-  // Profile avatar (inisial saja, tanpa upload foto)
-  const avatarContent = `<span class="profile-avatar-initial">${userInitial}</span>`;
+  const skinType     = localStorage.getItem('bglow_skin_type_' + userId) || '';
+  const skinProblems = '';  // loaded async from API
 
   page.innerHTML = `
-    <!-- Profile Header -->
-    <div class="profile-header-card anim-fade-in">
-      <div class="profile-avatar-wrapper" id="avatar-wrapper">
-        <div class="profile-avatar">
-          ${avatarContent}
+    <!-- Top bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;background:#fff;position:sticky;top:0;z-index:10;border-bottom:1px solid #f0f2f5">
+      <span style="font-size:17px;font-weight:800;color:#050505" id="prof-header-name">${esc(userName)}</span>
+      <button id="prof-hamburger" style="background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#050505" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Profile info block -->
+    <div style="background:#fff;padding:20px 16px 14px">
+      <div style="display:flex;align-items:center;gap:20px">
+        <!-- Avatar -->
+        <div id="prof-avatar" style="width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 4px 14px rgba(24,119,242,0.25)">
+          ${initial(userName)}
+        </div>
+        <!-- Stats -->
+        <div style="flex:1;display:flex;gap:0">
+          <div style="flex:1;text-align:center">
+            <div style="font-size:18px;font-weight:800;color:#050505" id="prof-post-count">—</div>
+            <div style="font-size:12px;color:#65676b;font-weight:500">Post</div>
+          </div>
+          <div style="flex:1;text-align:center;cursor:pointer" id="prof-followers-btn">
+            <div style="font-size:18px;font-weight:800;color:#050505" id="prof-follower-count">—</div>
+            <div style="font-size:12px;color:#65676b;font-weight:500">Followers</div>
+          </div>
+          <div style="flex:1;text-align:center;cursor:pointer" id="prof-following-btn">
+            <div style="font-size:18px;font-weight:800;color:#050505" id="prof-following-count">—</div>
+            <div style="font-size:12px;color:#65676b;font-weight:500">Following</div>
+          </div>
         </div>
       </div>
-      <div class="profile-name">${userName}</div>
-      <div class="profile-email">${userEmail}</div>
-      <!-- Subscription Badge -->
-      <div class="profile-sub-badge anim-fade-in-up anim-delay-1" id="sub-badge">
-        ${isPremium()
-          ? `<div style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#312e81,#4f46e5);border-radius:20px;padding:10px 20px;">
-              <svg viewBox="0 0 28 28" width="26" height="26" fill="none">
-                <circle cx="14" cy="14" r="13" fill="url(#crownPBg)" opacity="0.2"/>
-                <path d="M5 19 L7.5 11 L11 16 L14 8 L17 16 L20.5 11 L23 19 Z" fill="url(#crownPFill)" stroke="#FCD34D" stroke-width="0.8" stroke-linejoin="round"/>
-                <rect x="5" y="19" width="18" height="2.5" rx="1.2" fill="url(#crownPBand)"/>
-                <circle cx="14" cy="10" r="1.5" fill="#FCD34D"/>
-                <defs>
-                  <linearGradient id="crownPBg" x1="0" y1="0" x2="28" y2="28"><stop offset="0%" stop-color="#FDE68A"/><stop offset="100%" stop-color="#F59E0B"/></linearGradient>
-                  <linearGradient id="crownPFill" x1="5" y1="8" x2="23" y2="22" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FDE68A"/><stop offset="100%" stop-color="#D97706"/></linearGradient>
-                  <linearGradient id="crownPBand" x1="5" y1="19" x2="23" y2="22" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FCD34D"/><stop offset="100%" stop-color="#B45309"/></linearGradient>
-                </defs>
-              </svg>
-              <div>
-                <div style="font-size:13px;font-weight:800;color:#FDE68A;letter-spacing:0.2px;">Glow Plus</div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.7);font-weight:500;">Akses penuh ke semua fitur</div>
-              </div>
-            </div>`
-          : `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.12);border-radius:20px;padding:10px 16px;border:1px solid rgba(255,255,255,0.2);">
-              <div style="display:flex;align-items:center;gap:10px;">
-                <svg viewBox="0 0 28 28" width="24" height="24" fill="none">
-                  <circle cx="14" cy="14" r="13" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-                  <path d="M14 9v7l-3 4h6l-3-4V9" stroke="rgba(255,255,255,0.7)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                  <path d="M11 9h6" stroke="rgba(255,255,255,0.7)" stroke-width="1.3" stroke-linecap="round"/>
-                </svg>
-                <div>
-                  <div style="font-size:12px;font-weight:700;color:white;">Pengguna Basic</div>
-                  <div style="font-size:10px;color:rgba(255,255,255,0.6);">Upgrade untuk akses penuh</div>
-                </div>
-              </div>
-              <button id="profile-upgrade-btn" style="background:linear-gradient(135deg,#FDE68A,#F59E0B);color:#1e1b4b;font-size:10px;font-weight:800;border:none;border-radius:12px;padding:6px 12px;cursor:pointer;white-space:nowrap;">Upgrade</button>
-            </div>`
-        }
+
+      <!-- Name + bio -->
+      <div style="margin-top:12px">
+        <div style="font-size:15px;font-weight:700;color:#050505" id="prof-name">${esc(userName)}</div>
+        ${userEmail ? `<div style="font-size:12px;color:#65676b;margin-top:2px">${esc(userEmail)}</div>` : ''}
+      </div>
+
+      <!-- Skin badges -->
+      <div id="prof-skin-badges" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+        ${skinType ? skinTypeBadge(skinType) : ''}
+      </div>
+
+      <!-- Edit profile button -->
+      <div style="margin-top:12px">
+        <button id="prof-edit-btn" style="width:100%;padding:7px;border:1.5px solid #dbdbdb;border-radius:8px;background:#fff;font-size:13.5px;font-weight:600;cursor:pointer;color:#050505;transition:background 0.15s">
+          Edit Profil
+        </button>
       </div>
     </div>
 
-    <!-- Menu -->
-    <div class="profile-menu">
-      <div class="menu-section">
-        <div class="menu-section-title">Akses Cepat</div>
-        <div class="menu-item anim-fade-in-up anim-delay-2" id="menu-bpom">
-          <div class="mi-icon green">${icons.shield || '🛡️'}</div>
-          <span class="mi-text">Cek BPOM Produk</span>
-          <span class="mi-arrow">${icons.chevronRight || '>'}</span>
-        </div>
-        <div class="menu-item anim-fade-in-up anim-delay-3" id="menu-alarm">
-          <div class="mi-icon amber">${icons.sun || '☀️'}</div>
-          <span class="mi-text">Alarm Sunscreen</span>
-          <span class="mi-arrow">${icons.chevronRight || '>'}</span>
-        </div>
-        <div class="menu-item anim-fade-in-up anim-delay-4" id="menu-diary">
-          <div class="mi-icon purple">${icons.book || '📔'}</div>
-          <span class="mi-text">Diary Kulit</span>
-          <span class="mi-arrow">${icons.chevronRight || '>'}</span>
-        </div>
-      </div>
-
-      <div class="menu-section">
-        <div class="menu-section-title">Perawatan Kulit</div>
-        <div class="menu-item anim-fade-in-up anim-delay-4" id="menu-history">
-          <div class="mi-icon blue">${icons.camera || '📷'}</div>
-          <span class="mi-text">Riwayat Scan</span>
-          <span class="mi-arrow">${icons.chevronRight || '>'}</span>
-        </div>
-        <div class="menu-item anim-fade-in-up anim-delay-5" id="menu-favorites">
-          <div class="mi-icon red">${icons.heart || '❤️'}</div>
-          <span class="mi-text">Produk Favorit</span>
-          <span class="mi-arrow">${icons.chevronRight || '>'}</span>
-        </div>
-        <div class="menu-item anim-fade-in-up anim-delay-6" id="menu-settings">
-          <div class="mi-icon gray">${icons.settings || '⚙️'}</div>
-          <span class="mi-text">Pengaturan Akun</span>
-          <span class="mi-arrow">${icons.chevronRight || '>'}</span>
-        </div>
-      </div>
-    </div>
-
-      <div class="profile-version">B-Glow v2.0.0</div>
-
-      <!-- Posts Saya — loaded async -->
-      <div id="profile-my-posts"></div>
+    <!-- Posts grid -->
+    <div id="prof-posts-grid" style="background:#fff;margin-top:3px"></div>
   `;
 
+  // ── Event wiring ──
   setTimeout(() => {
-    const bpom = page.querySelector('#menu-bpom');
-    const alarm = page.querySelector('#menu-alarm');
-    const diary = page.querySelector('#menu-diary');
-    const settings = page.querySelector('#menu-settings');
-    const favorites = page.querySelector('#menu-favorites');
-    const history = page.querySelector('#menu-history');
+    page.querySelector('#prof-hamburger')?.addEventListener('click', openSettingsDrawer);
+    page.querySelector('#prof-edit-btn')?.addEventListener('click', () => { window.location.hash = '#/settings'; });
 
-    if (bpom) bpom.addEventListener('click', () => window.location.hash = '#/bpom');
-    if (alarm) alarm.addEventListener('click', () => window.location.hash = '#/alarm');
-    if (diary) diary.addEventListener('click', () => window.location.hash = '#/diary');
-    if (settings) settings.addEventListener('click', () => window.location.hash = '#/settings');
-    if (favorites) favorites.addEventListener('click', () => window.location.hash = '#/favorites');
-    if (history) history.addEventListener('click', () => window.location.hash = '#/scan-history');
+    // Load posts
+    const gridEl = page.querySelector('#prof-posts-grid');
+    if (gridEl) renderMyPosts(gridEl);
 
-    // Upgrade button (only shown for basic users)
-    const upgradeBtn = page.querySelector('#profile-upgrade-btn');
-    if (upgradeBtn) upgradeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      window.location.hash = '#/subscription';
-    });
-
-    // Load post saya async
-    const postsContainer = page.querySelector('#profile-my-posts');
-    if (postsContainer) renderMyPosts(postsContainer);
-
-    (async () => {
-      const userId = getUserId();
-      if (userId && userId !== 'guest') {
+    // Load profile stats from API
+    if (userId && userId !== 'guest') {
+      (async () => {
         try {
-          const res = await fetch(`${API_BASE_URL}/api/user/${userId}`, {
-            headers: getAuthHeaders()
-          });
-          if (res.ok) {
-            const user = await res.json();
-            
-            // Sync with local cache
-            localStorage.setItem('bglow_user', JSON.stringify({
-              id: user.id,
-              name: user.name,
-              email: user.email
-            }));
-            
-            if (user.profile_photo) {
-              localStorage.setItem('bglow_profile_photo_' + userId, user.profile_photo);
-            }
-            if (user.skin_type) {
-              localStorage.setItem('bglow_has_scanned_' + userId, '1');
-              localStorage.setItem('bglow_skin_type_' + userId, user.skin_type);
-              localStorage.setItem('bglow_acne_level_' + userId, user.acne_level);
-              localStorage.setItem('bglow_oil_level_' + userId, user.oil_level);
-              localStorage.setItem('bglow_pore_condition_' + userId, user.pore_condition);
-              localStorage.setItem('bglow_skin_score_' + userId, user.skin_score);
-            }
-            if (user.sunscreen_interval) {
-              localStorage.setItem('bglow_sunscreen_interval_' + userId, user.sunscreen_interval);
-            }
-            if (user.favorites) {
-              localStorage.setItem('bglow_favorites_' + userId, user.favorites);
-            }
-            if (user.diary_entries) {
-              localStorage.setItem('bglow_diary_entries_' + userId, user.diary_entries);
-            }
-            if (user.routine) {
-              localStorage.setItem('bglow_routine_' + userId, user.routine);
-            }
-            if (user.special_schedule) {
-              localStorage.setItem('bglow_special_schedule_' + userId, user.special_schedule);
-            }
-            if (user.streak) {
-              localStorage.setItem('bglow_streak_' + userId, user.streak);
-            }
-            if (user.routine_progress) {
-              localStorage.setItem('bglow_routine_progress_' + userId, user.routine_progress);
-            }
+          const res = await fetch(`${API_BASE_URL}/api/users/${userId}/profile`, { headers: getAuthHeaders() });
+          if (!res.ok) return;
+          const data = await res.json();
 
-            // Update DOM dynamically
-            const nameEl = page.querySelector('.profile-name');
-            const emailEl = page.querySelector('.profile-email');
-            const avatarEl = page.querySelector('.profile-avatar');
-            
-            if (nameEl && user.name) nameEl.textContent = user.name;
-            if (emailEl && user.email) emailEl.textContent = user.email;
-            
-            if (avatarEl) {
-              const initial = user.name ? user.name.charAt(0).toUpperCase() : 'B';
-              avatarEl.innerHTML = `<span class="profile-avatar-initial">${initial}</span>`;
-            }
+          // Post count
+          const postCountEl = page.querySelector('#prof-post-count');
+          if (postCountEl) postCountEl.textContent = data.posts?.length ?? 0;
 
-            if (user.skin_score) {
-              const scoreEl = page.querySelector('.profile-stat:nth-child(1) .ps-value');
-              if (scoreEl) scoreEl.textContent = user.skin_score;
-            }
+          // Follower/following
+          const follEl = page.querySelector('#prof-follower-count');
+          const folwEl = page.querySelector('#prof-following-count');
+          if (follEl) follEl.textContent = data.follower_count ?? 0;
+          if (folwEl) folwEl.textContent = data.following_count ?? 0;
+
+          // Name sync
+          if (data.user?.name) {
+            page.querySelector('#prof-header-name')?.setAttribute('textContent', data.user.name);
+            page.querySelector('#prof-name')?.textContent && (page.querySelector('#prof-name').textContent = data.user.name);
+            page.querySelector('#prof-avatar')?.textContent && (page.querySelector('#prof-avatar').textContent = initial(data.user.name));
+          }
+
+          // Skin badges
+          const badgesEl = page.querySelector('#prof-skin-badges');
+          if (badgesEl && data.user) {
+            const st = data.user.skin_type || skinType;
+            const sp = (data.user.skin_problems || '').split(',').filter(p => p.trim());
+            badgesEl.innerHTML = (st ? skinTypeBadge(st) : '') + sp.map(p => problemChip(p.trim())).join('');
           }
         } catch (err) {
-          console.error("Gagal sinkronisasi profil dari server:", err);
+          console.error('Profile stats load error', err);
         }
-      }
-    })();
+      })();
+    }
   }, 0);
 
   return page;

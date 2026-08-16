@@ -107,7 +107,6 @@ export function renderUserProfile(userId) {
           <button class="up-back-btn" id="up-back">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <span class="up-header-name">${esc(user.name || 'Profil')}</span>
         </div>
         <div class="up-avatar-wrap">
           <div class="up-avatar" id="up-avatar">

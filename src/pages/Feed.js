@@ -125,7 +125,46 @@ async function apiAddComment(postId, content) {
   return res.json();
 }
 
-// ─── Skeleton ────────────────────────────────────────────────────────────────
+// ─── Lightbox ─────────────────────────────────────────────────────────────────
+
+function openLightbox(urls, startIndex = 0) {
+  let cur = startIndex;
+  const lb = document.createElement('div');
+  lb.className = 'post-lightbox';
+
+  function render() {
+    lb.innerHTML = `
+      ${urls.length > 1 ? `<div class="lightbox-counter">${cur + 1} / ${urls.length}</div>` : ''}
+      <button class="lightbox-close" id="lb-close">✕</button>
+      <img class="lightbox-img" src="${urls[cur]}" alt="foto" draggable="false" />
+      ${urls.length > 1 && cur > 0             ? `<button class="lightbox-nav prev" id="lb-prev">‹</button>` : ''}
+      ${urls.length > 1 && cur < urls.length-1 ? `<button class="lightbox-nav next" id="lb-next">›</button>` : ''}
+      ${urls.length > 1 ? `
+        <div class="lightbox-dots">
+          ${urls.map((_, i) => `<div class="lightbox-dot ${i === cur ? 'active' : ''}" data-i="${i}"></div>`).join('')}
+        </div>` : ''}
+    `;
+    lb.querySelector('#lb-close')?.addEventListener('click', () => lb.remove());
+    lb.querySelector('#lb-prev')?.addEventListener('click', () => { cur--; render(); });
+    lb.querySelector('#lb-next')?.addEventListener('click', () => { cur++; render(); });
+    lb.querySelectorAll('.lightbox-dot').forEach(dot => {
+      dot.addEventListener('click', () => { cur = parseInt(dot.dataset.i); render(); });
+    });
+  }
+
+  render();
+  lb.addEventListener('click', (e) => { if (e.target === lb) lb.remove(); });
+  // Swipe
+  let touchStartX = 0;
+  lb.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  lb.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (dx < -50 && cur < urls.length - 1) { cur++; render(); }
+    if (dx >  50 && cur > 0)               { cur--; render(); }
+  });
+  document.body.appendChild(lb);
+}
+
 
 function renderSkeletons(count = 3) {
   return Array.from({ length: count }).map(() => {
@@ -273,9 +312,20 @@ function renderPostCard(post) {
   const card = document.createElement('div');
   card.className = 'post-card';
 
-  const imageHtml = post.image_url
-    ? `<img src="${API_BASE_URL}${post.image_url}" alt="foto" class="post-image" loading="lazy" />`
-    : '';
+  const images = post.image_url ? [`${API_BASE_URL}${post.image_url}`] : [];
+  const MAX_VISIBLE = 3;
+
+  const imageGridHtml = images.length > 0 ? `
+    <div class="post-image-grid">
+      ${images.slice(0, MAX_VISIBLE).map((url, i) => `
+        <div class="post-image-thumb" data-img-idx="${i}">
+          <img src="${url}" alt="foto" loading="lazy" />
+          ${i === MAX_VISIBLE - 1 && images.length > MAX_VISIBLE
+            ? `<div class="img-count-badge">+${images.length - MAX_VISIBLE}</div>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
 
   const menuHtml = isOwn
     ? `<div style="position:relative"><button class="post-menu-btn" data-action="menu">···</button></div>`
@@ -297,7 +347,7 @@ function renderPostCard(post) {
       ${menuHtml}
     </div>
     ${post.content ? `<div class="post-content">${escapeHtml(post.content)}</div>` : ''}
-    ${imageHtml}
+    ${imageGridHtml}
     ${likeCount > 0 || commentCount > 0 ? `
   <div class="post-stats">
     <div class="post-stats-likes">
@@ -324,6 +374,15 @@ function renderPostCard(post) {
       </button>
     </div>
   `;
+
+  // Image grid → lightbox
+  if (images.length > 0) {
+    card.querySelectorAll('.post-image-thumb').forEach(thumb => {
+      thumb.addEventListener('click', () => {
+        openLightbox(images, parseInt(thumb.dataset.imgIdx) || 0);
+      });
+    });
+  }
 
   // Like
   card.querySelector('[data-action="like"]').addEventListener('click', async (btn_e) => {

@@ -167,18 +167,139 @@
   white-space: pre-wrap;
 }
 
-/* Post image — full width, no border radius, bleeds edge to edge */
-.post-image {
-  display: block;
-  width: calc(100% + 32px);
-  margin-left: -16px;
-  margin-right: -16px;
-  object-fit: cover;
-  max-height: 380px;
-  min-height: 180px;
-  margin-bottom: 0;
-  background: #f0f2f5;
+/* Post image grid — thumbnail style like skinsort */
+.post-image-grid {
+  margin: 4px 0 8px;
+  display: flex;
+  gap: 3px;
+  border-radius: 14px;
+  overflow: hidden;
 }
+
+.post-image-thumb {
+  flex: 1;
+  aspect-ratio: 1;
+  overflow: hidden;
+  cursor: pointer;
+  background: #f0f2f5;
+  position: relative;
+  max-height: 200px;
+}
+
+.post-image-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.2s;
+}
+
+.post-image-thumb:hover img { opacity: 0.9; }
+
+.post-image-thumb .img-count-badge {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+/* Lightbox */
+.post-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: lbFadeIn 0.2s ease;
+}
+
+@keyframes lbFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.lightbox-img {
+  max-width: 100vw;
+  max-height: 80vh;
+  object-fit: contain;
+  display: block;
+  border-radius: 4px;
+  user-select: none;
+}
+
+.lightbox-counter {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(0,0,0,0.4);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s;
+}
+
+.lightbox-close:hover { background: rgba(255,255,255,0.25); }
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s;
+}
+
+.lightbox-nav:hover { background: rgba(255,255,255,0.25); }
+.lightbox-nav.prev { left: 12px; }
+.lightbox-nav.next { right: 12px; }
+
+.lightbox-dots {
+  position: absolute;
+  bottom: 20px;
+  display: flex;
+  gap: 6px;
+}
+
+.lightbox-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.lightbox-dot.active { background: #fff; }
 
 /* ─── Like/Comment counts row ── */
 .post-stats {

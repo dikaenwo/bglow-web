@@ -18,6 +18,13 @@ function getCurrentUserId() {
   } catch { return null; }
 }
 
+function getCurrentUserName() {
+  try {
+    const u = JSON.parse(localStorage.getItem('bglow_user') || '{}');
+    return u.name || 'Saya';
+  } catch { return 'Saya'; }
+}
+
 function timeAgo(isoString) {
   const diff = Math.floor((Date.now() - new Date(isoString)) / 1000);
   if (diff < 60) return 'Baru saja';
@@ -31,93 +38,94 @@ function avatarInitial(name) {
   return (name || '?').trim().charAt(0).toUpperCase();
 }
 
-const HEART_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-</svg>`;
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
-const CAMERA_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
-</svg>`;
+const HEART_SVG = `<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
 
-const PLUS_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-</svg>`;
+const COMMENT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>`;
+
+const CAMERA_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+
+const PLUS_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+
+const SEND_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
-let _posts = [];
-let _page  = 1;
-let _hasMore = true;
+let _posts     = [];
+let _page      = 1;
+let _hasMore   = true;
 let _isLoading = false;
 let _showModal = false;
-let _imageFile  = null;
+let _imageFile       = null;
 let _imagePreviewUrl = null;
-let _submitting = false;
-let _postListEl = null;
-let _modalEl    = null;
-let _overlayEl  = null;
+let _submitting      = false;
+let _postListEl      = null;
+let _modalEl         = null;
+let _overlayEl       = null;
 
-// ─── API Calls ───────────────────────────────────────────────────────────────
+// ─── API ─────────────────────────────────────────────────────────────────────
+
+const authHeaders = () => ({ Authorization: `Bearer ${getAuthToken()}` });
 
 async function apiFetchFeed(page = 1) {
-  const token = getAuthToken();
-  const res = await fetch(`${API_BASE_URL}/api/feed?page=${page}&limit=20`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await fetch(`${API_BASE_URL}/api/feed?page=${page}&limit=20`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
 async function apiCreatePost(content, imageUrl) {
-  const token = getAuthToken();
   const res = await fetch(`${API_BASE_URL}/api/posts`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ content, image_url: imageUrl || null })
   });
-  if (!res.ok) {
-    const d = await res.json().catch(() => ({}));
-    throw new Error(d.detail || 'Gagal membuat post');
-  }
+  if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Gagal membuat post'); }
   return res.json();
 }
 
 async function apiDeletePost(postId) {
-  const token = getAuthToken();
-  const res = await fetch(`${API_BASE_URL}/api/posts/${postId}`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await fetch(`${API_BASE_URL}/api/posts/${postId}`, { method: 'DELETE', headers: authHeaders() });
   if (!res.ok) throw new Error('Gagal menghapus post');
 }
 
 async function apiToggleLike(postId) {
-  const token = getAuthToken();
-  const res = await fetch(`${API_BASE_URL}/api/posts/${postId}/like`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const res = await fetch(`${API_BASE_URL}/api/posts/${postId}/like`, { method: 'POST', headers: authHeaders() });
   if (!res.ok) throw new Error('Gagal toggle like');
   return res.json();
 }
 
 async function apiUploadImage(file) {
-  const token = getAuthToken();
   const form = new FormData();
   form.append('image', file);
-  const res = await fetch(`${API_BASE_URL}/api/upload/image`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: form
-  });
-  if (!res.ok) {
-    const d = await res.json().catch(() => ({}));
-    throw new Error(d.detail || 'Gagal upload foto');
-  }
+  const res = await fetch(`${API_BASE_URL}/api/upload/image`, { method: 'POST', headers: authHeaders(), body: form });
+  if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Gagal upload foto'); }
   return res.json();
 }
 
-// ─── Render Helpers ──────────────────────────────────────────────────────────
+async function apiFetchComments(postId) {
+  const res = await fetch(`${API_BASE_URL}/api/posts/${postId}/comments`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Gagal load komentar');
+  return res.json();
+}
+
+async function apiAddComment(postId, content) {
+  const res = await fetch(`${API_BASE_URL}/api/posts/${postId}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ content })
+  });
+  if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Gagal komentar'); }
+  return res.json();
+}
+
+// ─── Skeleton ────────────────────────────────────────────────────────────────
 
 function renderSkeletons(count = 3) {
   return Array.from({ length: count }).map(() => {
@@ -126,32 +134,155 @@ function renderSkeletons(count = 3) {
     el.innerHTML = `
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
         <div class="skeleton-avatar"></div>
-        <div style="flex:1"><div class="skeleton-line" style="width:40%;height:13px"></div><div class="skeleton-line" style="width:25%;height:10px;margin-top:6px"></div></div>
+        <div style="flex:1">
+          <div class="skeleton-line" style="width:42%;height:13px"></div>
+          <div class="skeleton-line" style="width:26%;height:10px;margin-top:6px"></div>
+        </div>
       </div>
       <div class="skeleton-line" style="width:100%"></div>
-      <div class="skeleton-line" style="width:85%"></div>
-      <div class="skeleton-line" style="width:60%;margin-bottom:0"></div>
+      <div class="skeleton-line" style="width:80%"></div>
+      <div class="skeleton-line" style="width:55%;margin-bottom:0"></div>
     `;
     return el;
   });
 }
 
+// ─── Comment Section ──────────────────────────────────────────────────────────
+
+function buildCommentSection(postId, initialCount) {
+  const section = document.createElement('div');
+  section.className = 'comment-section';
+  section.id = `comments-${postId}`;
+
+  const myName = getCurrentUserName();
+
+  section.innerHTML = `
+    <div class="comment-input-row">
+      <div class="comment-avatar-sm">${avatarInitial(myName)}</div>
+      <div class="comment-input-wrap">
+        <input class="comment-input" id="comment-input-${postId}" type="text" placeholder="Tulis komentar…" maxlength="500" />
+        <button class="comment-send-btn" id="comment-send-${postId}">${SEND_SVG}</button>
+      </div>
+    </div>
+    <div class="comment-list" id="comment-list-${postId}"></div>
+  `;
+
+  let _loaded = false;
+  let _sending = false;
+
+  async function loadComments() {
+    const listEl = section.querySelector(`#comment-list-${postId}`);
+    if (_loaded) return;
+    _loaded = true;
+
+    listEl.innerHTML = `<div class="comment-skeleton">
+      <div class="skeleton-avatar" style="width:32px;height:32px"></div>
+      <div style="flex:1"><div class="skeleton-line" style="width:60%;height:11px"></div><div class="skeleton-line" style="width:80%;height:10px;margin-top:4px"></div></div>
+    </div>`;
+
+    try {
+      const data = await apiFetchComments(postId);
+      listEl.innerHTML = '';
+      if (data.comments.length === 0) {
+        listEl.innerHTML = '<div class="comments-empty">Belum ada komentar. Jadilah yang pertama! 💬</div>';
+      } else {
+        data.comments.forEach(c => listEl.appendChild(renderCommentItem(c)));
+      }
+    } catch {
+      listEl.innerHTML = '<div class="comments-empty">Gagal memuat komentar</div>';
+    }
+  }
+
+  function renderCommentItem(c) {
+    const item = document.createElement('div');
+    item.className = 'comment-item';
+    item.innerHTML = `
+      <div class="comment-avatar-sm">${avatarInitial(c.user_name)}</div>
+      <div>
+        <div class="comment-bubble">
+          <div class="comment-user-name">${escapeHtml(c.user_name || 'Pengguna')}</div>
+          <div class="comment-text">${escapeHtml(c.content)}</div>
+        </div>
+        <div class="comment-time">${timeAgo(c.created_at)}</div>
+      </div>
+    `;
+    return item;
+  }
+
+  // Send comment
+  const input = section.querySelector(`#comment-input-${postId}`);
+  const sendBtn = section.querySelector(`#comment-send-${postId}`);
+
+  input.addEventListener('input', () => {
+    sendBtn.classList.toggle('active', input.value.trim().length > 0);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendComment(); }
+  });
+
+  sendBtn.addEventListener('click', sendComment);
+
+  async function sendComment() {
+    const text = input.value.trim();
+    if (!text || _sending) return;
+    _sending = true;
+    input.value = '';
+    sendBtn.classList.remove('active');
+
+    try {
+      const comment = await apiAddComment(postId, text);
+      const listEl = section.querySelector(`#comment-list-${postId}`);
+      // Remove empty state if present
+      listEl.querySelector('.comments-empty')?.remove();
+      listEl.appendChild(renderCommentItem(comment));
+      listEl.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      // Update comment count on card
+      const countEl = document.querySelector(`[data-post-id="${postId}"] .comment-count-label`);
+      if (countEl) {
+        const n = parseInt(countEl.textContent) + 1;
+        countEl.textContent = n;
+      }
+    } catch (err) {
+      alert(err.message);
+      input.value = text;
+    } finally {
+      _sending = false;
+    }
+  }
+
+  // Auto-load when opened
+  const observer = new MutationObserver(() => {
+    if (section.classList.contains('open') && !_loaded) loadComments();
+  });
+  observer.observe(section, { attributes: true, attributeFilter: ['class'] });
+
+  return section;
+}
+
+// ─── Post Card ───────────────────────────────────────────────────────────────
+
 function renderPostCard(post) {
-  const myId = getCurrentUserId();
+  const myId  = getCurrentUserId();
   const isOwn = myId && post.user_id === myId;
+
+  const wrapper = document.createElement('div');
+  wrapper.dataset.postId = post.id;
+
   const card = document.createElement('div');
   card.className = 'post-card';
-  card.dataset.postId = post.id;
 
   const imageHtml = post.image_url
-    ? `<img src="${API_BASE_URL}${post.image_url}" alt="Post image" class="post-image" loading="lazy" />`
+    ? `<img src="${API_BASE_URL}${post.image_url}" alt="foto" class="post-image" loading="lazy" />`
     : '';
 
   const menuHtml = isOwn
-    ? `<div style="position:relative">
-         <button class="post-menu-btn" data-action="menu">···</button>
-       </div>`
+    ? `<div style="position:relative"><button class="post-menu-btn" data-action="menu">···</button></div>`
     : '';
+
+  const likeCount    = post.like_count    || 0;
+  const commentCount = post.comment_count || 0;
 
   card.innerHTML = `
     <div class="post-header">
@@ -167,123 +298,110 @@ function renderPostCard(post) {
     </div>
     ${post.content ? `<div class="post-content">${escapeHtml(post.content)}</div>` : ''}
     ${imageHtml}
+    ${likeCount > 0 || commentCount > 0 ? `
+    <div class="post-stats">
+      <div class="post-stats-likes">
+        ${likeCount > 0 ? `<span class="post-stats-likes-icon">❤️</span> <span class="like-stats-count">${likeCount}</span>` : ''}
+      </div>
+      ${commentCount > 0 ? `<span><span class="comment-count-label">${commentCount}</span> komentar</span>` : ''}
+    </div>` : '<div class="post-stats" style="display:none"></div>'}
     <div class="post-footer">
       <button class="like-btn ${post.liked_by_me ? 'liked' : ''}" data-action="like">
-        ${HEART_SVG}
-        <span class="like-count">${post.like_count || 0}</span>
+        ${HEART_SVG} Suka
+      </button>
+      <button class="comment-toggle-btn" data-action="comment">
+        ${COMMENT_SVG} Komentar
       </button>
     </div>
   `;
 
-  // Like button
-  card.querySelector('[data-action="like"]').addEventListener('click', async (e) => {
-    const btn = e.currentTarget;
-    const countEl = btn.querySelector('.like-count');
+  // Like
+  card.querySelector('[data-action="like"]').addEventListener('click', async (btn_e) => {
+    const btn = btn_e.currentTarget;
     const wasLiked = btn.classList.contains('liked');
-
-    // Optimistic update
     btn.classList.toggle('liked');
-    btn.querySelector('svg').classList.add('like-pulse'); // trigger animation
-    countEl.textContent = wasLiked
-      ? Math.max(0, parseInt(countEl.textContent) - 1)
-      : parseInt(countEl.textContent) + 1;
+
+    // Update stats row
+    const statsLike = card.querySelector('.like-stats-count');
+    const statsRow  = card.querySelector('.post-stats');
+    if (statsLike) {
+      const n = wasLiked ? Math.max(0, parseInt(statsLike.textContent) - 1) : parseInt(statsLike.textContent) + 1;
+      statsLike.textContent = n;
+      if (n === 0 && !card.querySelector('.comment-count-label')) {
+        statsRow.style.display = 'none';
+      }
+    }
 
     try {
       const result = await apiToggleLike(post.id);
-      countEl.textContent = result.like_count;
-      if (result.liked) {
-        btn.classList.add('liked');
-      } else {
-        btn.classList.remove('liked');
-      }
+      // sync
+      if (statsLike) statsLike.textContent = result.like_count;
+      if (result.liked) btn.classList.add('liked'); else btn.classList.remove('liked');
+      if (result.like_count > 0) statsRow.style.display = '';
     } catch {
-      // Revert on error
-      btn.classList.toggle('liked');
-      countEl.textContent = wasLiked
-        ? parseInt(countEl.textContent) + 1
-        : Math.max(0, parseInt(countEl.textContent) - 1);
+      btn.classList.toggle('liked'); // revert
     }
   });
 
-  // Menu button (delete)
-  if (isOwn) {
-    const menuBtn = card.querySelector('[data-action="menu"]');
-    menuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      // Remove any existing popup
-      document.querySelectorAll('.delete-popup').forEach(p => p.remove());
+  // Toggle comment section
+  card.querySelector('[data-action="comment"]').addEventListener('click', () => {
+    const section = wrapper.querySelector('.comment-section');
+    if (section) section.classList.toggle('open');
+  });
 
+  // Menu (delete)
+  if (isOwn) {
+    card.querySelector('[data-action="menu"]')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.delete-popup').forEach(p => p.remove());
       const popup = document.createElement('div');
       popup.className = 'delete-popup';
       popup.innerHTML = `<button class="danger-action">🗑 Hapus Post</button>`;
-      menuBtn.parentElement.appendChild(popup);
-
+      e.currentTarget.parentElement.appendChild(popup);
       popup.querySelector('button').addEventListener('click', async () => {
         popup.remove();
         if (!confirm('Hapus post ini?')) return;
         try {
           await apiDeletePost(post.id);
-          card.style.animation = 'feedSlideIn 0.2s ease reverse';
-          setTimeout(() => card.remove(), 200);
-        } catch (err) {
-          alert(err.message);
-        }
+          wrapper.style.opacity = '0';
+          wrapper.style.transition = 'opacity 0.2s';
+          setTimeout(() => wrapper.remove(), 220);
+        } catch (err) { alert(err.message); }
       });
-
-      // Close on outside click
-      setTimeout(() => {
-        document.addEventListener('click', () => popup.remove(), { once: true });
-      }, 0);
+      setTimeout(() => document.addEventListener('click', () => popup.remove(), { once: true }), 0);
     });
   }
 
-  return card;
+  wrapper.appendChild(card);
+  wrapper.appendChild(buildCommentSection(post.id, commentCount));
+  return wrapper;
 }
 
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-// ─── Load Feed ───────────────────────────────────────────────────────────────
+// ─── Feed Loading ────────────────────────────────────────────────────────────
 
 async function loadFeed(reset = false) {
   if (_isLoading) return;
   if (!reset && !_hasMore) return;
-
   _isLoading = true;
 
   if (reset) {
-    _page = 1;
-    _posts = [];
-    _hasMore = true;
+    _page = 1; _posts = []; _hasMore = true;
     if (_postListEl) _postListEl.innerHTML = '';
   }
 
-  // Show skeletons on first load
   const skeletons = renderSkeletons(3);
   if (_postListEl && _page === 1) skeletons.forEach(s => _postListEl.appendChild(s));
 
   try {
     const data = await apiFetchFeed(_page);
     skeletons.forEach(s => s.remove());
-
     _hasMore = data.has_more;
     _page++;
 
-    if (data.posts.length === 0 && _posts.length === 0) {
-      renderEmptyState();
-      return;
-    }
+    if (data.posts.length === 0 && _posts.length === 0) { renderEmptyState(); return; }
 
     _posts.push(...data.posts);
-    data.posts.forEach(post => {
-      if (_postListEl) _postListEl.appendChild(renderPostCard(post));
-    });
-
+    data.posts.forEach(post => { if (_postListEl) _postListEl.appendChild(renderPostCard(post)); });
     updateLoadMoreButton();
   } catch (err) {
     skeletons.forEach(s => s.remove());
@@ -298,9 +416,9 @@ function renderEmptyState() {
   if (!_postListEl) return;
   _postListEl.innerHTML = `
     <div class="feed-empty">
-      <div class="feed-empty-icon">🌸</div>
+      <div class="feed-empty-icon">💬</div>
       <h3>Belum ada post</h3>
-      <p>Jadilah yang pertama berbagi tips skincare!</p>
+      <p>Jadilah yang pertama berbagi tips & pengalaman skincare kamu!</p>
       <button class="feed-empty-btn" id="feed-empty-post-btn">${PLUS_SVG} Buat Post Pertama</button>
     </div>
   `;
@@ -308,9 +426,7 @@ function renderEmptyState() {
 }
 
 function updateLoadMoreButton() {
-  const existing = document.getElementById('feed-load-more-wrap');
-  if (existing) existing.remove();
-
+  document.getElementById('feed-load-more-wrap')?.remove();
   if (_hasMore && _postListEl) {
     const wrap = document.createElement('div');
     wrap.id = 'feed-load-more-wrap';
@@ -321,13 +437,12 @@ function updateLoadMoreButton() {
   }
 }
 
-// ─── Create Post Modal ───────────────────────────────────────────────────────
+// ─── Create Post Modal ────────────────────────────────────────────────────────
 
 function openModal() {
   if (_showModal) return;
   _showModal = true;
-  _imageFile = null;
-  _imagePreviewUrl = null;
+  _imageFile = null; _imagePreviewUrl = null;
 
   _overlayEl = document.createElement('div');
   _overlayEl.className = 'modal-overlay';
@@ -337,16 +452,14 @@ function openModal() {
   _modalEl.innerHTML = `
     <div class="modal-handle"></div>
     <div class="modal-header">
-      <span class="modal-title">✨ Buat Post Baru</span>
+      <span class="modal-title">Buat Post</span>
       <button class="modal-close-btn" id="modal-close">✕</button>
     </div>
-    <textarea class="post-textarea" id="post-content" placeholder="Bagikan tips skincare, pengalaman, atau pertanyaan kamu…" maxlength="1000"></textarea>
+    <textarea class="post-textarea" id="post-content" placeholder="Apa yang sedang kamu pikirkan tentang skincare?" maxlength="1000"></textarea>
     <div class="char-count" id="char-count">0 / 1000</div>
     <div id="image-preview-container"></div>
     <div class="modal-actions">
-      <label class="upload-photo-btn" for="post-photo-input">
-        ${CAMERA_SVG} Foto
-      </label>
+      <label class="upload-photo-btn" for="post-photo-input">${CAMERA_SVG} Foto</label>
       <input type="file" id="post-photo-input" accept="image/*" style="display:none" />
       <button class="post-submit-btn" id="post-submit-btn" disabled>Posting</button>
     </div>
@@ -355,12 +468,10 @@ function openModal() {
   _overlayEl.appendChild(_modalEl);
   document.body.appendChild(_overlayEl);
 
-  // Close
   document.getElementById('modal-close').addEventListener('click', closeModal);
   _overlayEl.addEventListener('click', (e) => { if (e.target === _overlayEl) closeModal(); });
 
-  // Char counter
-  const textarea = document.getElementById('post-content');
+  const textarea  = document.getElementById('post-content');
   const charCount = document.getElementById('char-count');
   const submitBtn = document.getElementById('post-submit-btn');
 
@@ -368,17 +479,14 @@ function openModal() {
     const len = textarea.value.length;
     charCount.textContent = `${len} / 1000`;
     charCount.classList.toggle('near-limit', len > 850);
-    const hasContent = textarea.value.trim().length > 0 || _imageFile;
-    submitBtn.disabled = !hasContent || _submitting;
+    submitBtn.disabled = (!textarea.value.trim() && !_imageFile) || _submitting;
   });
 
-  // Photo upload
   document.getElementById('post-photo-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
     _imageFile = file;
     _imagePreviewUrl = URL.createObjectURL(file);
-
     const container = document.getElementById('image-preview-container');
     container.innerHTML = `
       <div class="image-preview-wrap">
@@ -387,39 +495,29 @@ function openModal() {
       </div>
     `;
     document.getElementById('remove-img-btn').addEventListener('click', () => {
-      _imageFile = null;
-      _imagePreviewUrl = null;
-      container.innerHTML = '';
-      const hasContent = textarea.value.trim().length > 0;
-      submitBtn.disabled = !hasContent || _submitting;
+      _imageFile = null; _imagePreviewUrl = null; container.innerHTML = '';
+      submitBtn.disabled = !textarea.value.trim() || _submitting;
     });
-
-    const hasContent = textarea.value.trim().length > 0 || true; // image alone is fine
-    submitBtn.disabled = !hasContent || _submitting;
+    submitBtn.disabled = _submitting;
   });
 
-  // Submit
   submitBtn.addEventListener('click', submitPost);
-
-  // Focus textarea
-  setTimeout(() => textarea.focus(), 100);
+  setTimeout(() => textarea.focus(), 80);
 }
 
 function closeModal() {
   if (!_showModal) return;
   _showModal = false;
   if (_overlayEl) _overlayEl.remove();
-  _overlayEl = null;
-  _modalEl = null;
+  _overlayEl = null; _modalEl = null;
   if (_imagePreviewUrl) URL.revokeObjectURL(_imagePreviewUrl);
 }
 
 async function submitPost() {
   if (_submitting) return;
-  const textarea = document.getElementById('post-content');
+  const textarea  = document.getElementById('post-content');
   const submitBtn = document.getElementById('post-submit-btn');
-  const content = textarea ? textarea.value.trim() : '';
-
+  const content   = textarea?.value.trim() || '';
   if (!content && !_imageFile) return;
 
   _submitting = true;
@@ -427,29 +525,19 @@ async function submitPost() {
 
   try {
     let imageUrl = null;
-
-    // Upload foto jika ada
     if (_imageFile) {
-      const uploadResult = await apiUploadImage(_imageFile);
-      imageUrl = uploadResult.image_url;
+      const r = await apiUploadImage(_imageFile);
+      imageUrl = r.image_url;
     }
-
     const newPost = await apiCreatePost(content, imageUrl);
-    newPost.like_count   = 0;
-    newPost.liked_by_me  = false;
+    newPost.like_count = 0; newPost.liked_by_me = false; newPost.comment_count = 0;
 
     closeModal();
-
-    // Tambahkan ke atas feed
     if (_postListEl) {
-      const emptyState = _postListEl.querySelector('.feed-empty');
-      if (emptyState) emptyState.remove();
-
+      _postListEl.querySelector('.feed-empty')?.remove();
       const card = renderPostCard(newPost);
-      card.style.animation = 'feedSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
       _postListEl.insertBefore(card, _postListEl.firstChild);
     }
-
     _posts.unshift(newPost);
   } catch (err) {
     alert(err.message || 'Gagal memposting');
@@ -459,40 +547,78 @@ async function submitPost() {
   }
 }
 
-// ─── Main Render ─────────────────────────────────────────────────────────────
+// ─── Main Render ──────────────────────────────────────────────────────────────
 
 export function renderFeed() {
-  // Reset state
-  _posts = [];
-  _page = 1;
-  _hasMore = true;
-  _isLoading = false;
-  _showModal = false;
+  _posts = []; _page = 1; _hasMore = true;
+  _isLoading = false; _showModal = false;
 
   const page = document.createElement('div');
   page.className = 'feed-page';
-
   page.innerHTML = `
     <div class="feed-header">
       <div>
-        <h1>Komunitas B-Glow ✨</h1>
+        <h1>B-Glow Community</h1>
         <div class="feed-header-sub">Berbagi tips & pengalaman skincare</div>
       </div>
-      <button class="feed-create-btn" id="feed-create-btn">
-        ${PLUS_SVG} Post
-      </button>
+      <button class="feed-create-btn" id="feed-create-btn">${PLUS_SVG} Post</button>
     </div>
     <div class="feed-list" id="feed-post-list"></div>
   `;
 
-  document.head.insertAdjacentHTML('beforeend', `<link rel="stylesheet" href="/src/styles/feed.css" />`);
-
   _postListEl = page.querySelector('#feed-post-list');
-
   page.querySelector('#feed-create-btn').addEventListener('click', openModal);
-
-  // Load feed after render
   requestAnimationFrame(() => loadFeed(true));
-
   return page;
+}
+
+// ─── Profile Posts Section (exported for Profile page) ────────────────────────
+
+export async function renderMyPosts(containerEl) {
+  if (!containerEl) return;
+
+  containerEl.innerHTML = `
+    <div class="profile-posts-section">
+      <div class="profile-posts-title">📝 Post Saya</div>
+      <div id="my-posts-list">
+        ${Array.from({length:2}).map(() => `
+          <div class="post-skeleton" style="border-radius:12px;margin-bottom:10px">
+            <div class="skeleton-line" style="width:80%"></div>
+            <div class="skeleton-line" style="width:60%"></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/users/me/posts`, { headers: authHeaders() });
+    const data = await res.json();
+    const listEl = containerEl.querySelector('#my-posts-list');
+
+    if (!data.posts || data.posts.length === 0) {
+      listEl.innerHTML = `<div class="profile-posts-empty">Belum ada post. <button style="color:#1877f2;background:none;border:none;cursor:pointer;font-weight:600" onclick="window.location.hash='#/feed'">Buat Post →</button></div>`;
+      return;
+    }
+
+    listEl.innerHTML = '';
+    data.posts.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'profile-post-card';
+      card.innerHTML = `
+        ${p.image_url ? `<img src="${API_BASE_URL}${p.image_url}" class="profile-post-img" loading="lazy" />` : ''}
+        ${p.content   ? `<div class="profile-post-content">${escapeHtml(p.content)}</div>` : ''}
+        <div class="profile-post-meta">
+          <span>❤️ ${p.like_count || 0} suka</span>
+          <span>💬 ${p.comment_count || 0} komentar</span>
+          <span>${timeAgo(p.created_at)}</span>
+        </div>
+      `;
+      card.addEventListener('click', () => { window.location.hash = '#/feed'; });
+      listEl.appendChild(card);
+    });
+  } catch (err) {
+    console.warn('[Profile Posts]', err);
+    containerEl.querySelector('#my-posts-list').innerHTML = '<div class="profile-posts-empty">Gagal memuat post</div>';
+  }
 }

@@ -2,6 +2,7 @@ import { icons } from '../components/BottomNav.js';
 import { getStreak, getUserId, getAuthHeaders, isPremium, getSubscriptionPlan } from '../utils/store.js';
 import { showCustomAlert } from '../utils/helpers.js';
 import { API_BASE_URL } from '../config.js';
+import { renderMyPosts } from './Feed.js';
 
 function getScanCount() {
   const val = localStorage.getItem('bglow_scan_count_' + getUserId());
@@ -158,7 +159,10 @@ export function renderProfile() {
       </div>
     </div>
 
-    <div class="profile-version">B-Glow v1.0.0</div>
+      <div class="profile-version">B-Glow v2.0.0</div>
+
+      <!-- Posts Saya — loaded async -->
+      <div id="profile-my-posts"></div>
   `;
 
   setTimeout(() => {
@@ -182,6 +186,10 @@ export function renderProfile() {
       e.stopPropagation();
       window.location.hash = '#/subscription';
     });
+
+    // Load post saya async
+    const postsContainer = page.querySelector('#profile-my-posts');
+    if (postsContainer) renderMyPosts(postsContainer);
 
     (async () => {
       const userId = getUserId();

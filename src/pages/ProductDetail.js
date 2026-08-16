@@ -1,6 +1,7 @@
 import { icons } from '../components/BottomNav.js';
 import { getUserId, syncUserData } from '../utils/store.js';
 import { showCustomAlert } from '../utils/helpers.js';
+import { API_BASE_URL } from '../config.js';
 
 // ─── Badge icon mapping ───────────────────────────────────────────────────────
 const BADGE_ICONS = {
@@ -209,6 +210,10 @@ page.innerHTML = `
         </div>
         `}
       </div>
+
+      <!-- Product Reviews (loaded async) -->
+      <div id="pd-reviews-section" class="review-section"></div>
+
     </div>
 
     <!-- Fixed Bottom Buttons -->
@@ -339,6 +344,136 @@ function showAddToRoutineModal(product) {
   overlay.querySelector('#btn-cancel-add').addEventListener('click', () => overlay.remove());
   document.body.appendChild(overlay);
 }
+
+// ─── Load & Render Reviews ──────────────────────────────────────────────────
+async function loadReviews() {
+  const reviewsEl = page.querySelector('#pd-reviews-section');
+  if (!reviewsEl || !p.name) return;
+
+  try {
+    const token = (() => {
+      try { return JSON.parse(localStorage.getItem('bglow_user') || '{}').token || localStorage.getItem('bglow_token'); } catch { return null; }
+    })();
+
+    const res = await fetch(`${API_BASE_URL}/api/products/${encodeURIComponent(p.name)}/reviews`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const starsSVG = (rating, filled = 'star-filled', empty = 'star-empty') =>
+      Array.from({ length: 5 }, (_, i) =>
+        `<svg viewBox="0 0 24 24" class="${i < rating ? filled : empty}">
+           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+         </svg>`
+      ).join('');
+
+    const timeAgo = (iso) => {
+      const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+      if (diff < 60) return 'Baru saja';
+      if (diff < 3600) return `${Math.floor(diff / 60)} mnt lalu`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)} jam lalu`;
+      return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    };
+
+    const reviewsHtml = data.reviews.length > 0
+      ? data.reviews.map(r => `
+          <div class="review-card">
+            <div class="review-card-header">
+              <div class="review-avatar">${(r.user_name || '?').charAt(0).toUpperCase()}</div>
+              <div>
+                <div class="review-user-name">${r.user_name || 'Pengguna'}</div>
+                <div class="review-stars">${starsSVG(r.rating)}</div>
+              </div>
+              <span class="review-time">${timeAgo(r.created_at)}</span>
+            </div>
+            ${r.review_text ? `<div class="review-text">${r.review_text}</div>` : ''}
+          </div>
+        `).join('')
+      : '<div class="review-empty">Belum ada review. Jadilah yang pertama! 🌸</div>';
+
+    // Form tambah review (hanya jika belum pernah review)
+    let formHtml = '';
+    if (!data.already_reviewed) {
+      formHtml = `
+        <div class="add-review-form" id="add-review-form">
+          <div class="add-review-title">✍️ Tulis Review Kamu</div>
+          <div class="star-picker" id="star-picker">
+            ${Array.from({ length: 5 }, (_, i) =>
+              `<button type="button" data-star="${i + 1}">
+                <svg viewBox="0 0 24 24" class="inactive" id="star-icon-${i}">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </button>`
+            ).join('')}
+          </div>
+          <textarea class="review-textarea" id="review-text-input" placeholder="Ceritakan pengalamanmu pakai produk ini… (opsional)" maxlength="500"></textarea>
+          <button class="review-submit-btn" id="review-submit-btn" disabled>Kirim Review</button>
+        </div>
+      `;
+    }
+
+    reviewsEl.innerHTML = `
+      <h3 class="review-section-title">⭐ Review Pengguna</h3>
+      ${data.total > 0 ? `
+        <div class="review-avg-row">
+          <span class="review-avg-score">${data.avg_rating}</span>
+          <div>
+            <div class="review-avg-stars">${starsSVG(Math.round(data.avg_rating))}</div>
+            <div class="review-avg-label">${data.total} review</div>
+          </div>
+        </div>
+      ` : ''}
+      ${formHtml}
+      ${reviewsHtml}
+    `;
+
+    // Star picker logic
+    let selectedRating = 0;
+    const picker = reviewsEl.querySelector('#star-picker');
+    const submitBtn = reviewsEl.querySelector('#review-submit-btn');
+
+    picker?.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedRating = parseInt(btn.dataset.star);
+        picker.querySelectorAll('svg').forEach((svg, i) => {
+          svg.className = i < selectedRating ? 'active' : 'inactive';
+        });
+        if (submitBtn) submitBtn.disabled = false;
+      });
+    });
+
+    submitBtn?.addEventListener('click', async () => {
+      if (!selectedRating) return;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Mengirim…';
+      const reviewText = reviewsEl.querySelector('#review-text-input')?.value.trim() || '';
+      try {
+        const res2 = await fetch(`${API_BASE_URL}/api/products/${encodeURIComponent(p.name)}/reviews`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ rating: selectedRating, review_text: reviewText })
+        });
+        if (!res2.ok) {
+          const errData = await res2.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Gagal mengirim review');
+        }
+        // Reload reviews
+        loadReviews();
+        showCustomAlert('Review berhasil dikirim! Terima kasih 🌸', 'Review Terkirim');
+      } catch (err) {
+        showCustomAlert(err.message, 'Gagal');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Kirim Review';
+      }
+    });
+
+  } catch (err) {
+    console.warn('[ProductDetail] Gagal load reviews:', err);
+  }
+}
+
+requestAnimationFrame(loadReviews);
 
 return page;
 }

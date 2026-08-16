@@ -16,7 +16,7 @@ import './styles/routine.css';
 import './styles/subscription.css';
 import './styles/product-detail.css';
 import './styles/scan-history.css';
-
+import './styles/feed.css';
 import { createBottomNav } from './components/BottomNav.js';
 import { renderIntro } from './pages/Intro.js';
 import { renderHome } from './pages/Home.js';
@@ -36,6 +36,7 @@ import { renderSubscription } from './pages/Subscription.js';
 import { renderProductDetail } from './pages/ProductDetail.js';
 import { renderFavorites } from './pages/Favorites.js';
 import { renderScanHistory } from './pages/ScanHistory.js';
+import { renderFeed } from './pages/Feed.js';
 import { requestLocationWithPermission } from './utils/geolocation.js';
 import { registerAlarmServiceWorker } from './utils/alarm.js';
 
@@ -64,6 +65,7 @@ const tabMap = {
   'diary': 'profile',
   'favorites': 'profile',
   'scan-history': 'profile',
+  'feed':           'feed',
   'recommendations': 'recommendations',
 };
 
@@ -124,6 +126,7 @@ function handleRoute() {
     case 'subscription': pageEl = renderSubscription(); break;
     case 'product-detail': pageEl = renderProductDetail(); break;
     case 'favorites': pageEl = renderFavorites(); break;
+    case 'feed':        pageEl = renderFeed(); break;
     case 'scan-history': pageEl = renderScanHistory(); break;
     default: pageEl = renderHome(); break;
   }

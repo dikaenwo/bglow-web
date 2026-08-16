@@ -165,6 +165,186 @@ function openLightbox(urls, startIndex = 0) {
   document.body.appendChild(lb);
 }
 
+// ─── Post Detail Sheet ───────────────────────────────────────────────────────────────
+
+function openPostDetail(post) {
+  const myName = getCurrentUserName();
+  const images = post.image_url ? [`${API_BASE_URL}${post.image_url}`] : [];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'post-detail-overlay';
+
+  const imageGridHtml = images.length > 0 ? `
+    <div class="post-image-grid" style="margin-bottom:12px">
+      ${images.map((url, i) => `
+        <div class="post-image-thumb" data-img-idx="${i}">
+          <img src="${url}" alt="foto" loading="lazy" />
+        </div>`).join('')}
+    </div>` : '';
+
+  const sheet = document.createElement('div');
+  sheet.className = 'post-detail-sheet';
+  sheet.innerHTML = `
+    <div class="pds-header">
+      <span class="pds-title">Post</span>
+      <button class="pds-close" id="pds-close-btn">✕</button>
+    </div>
+    <div class="pds-body" id="pds-body">
+      <div class="pds-post">
+        <div class="post-header" style="margin-bottom:10px">
+          <div class="post-avatar">${avatarInitial(post.user_name)}</div>
+          <div class="post-user-info">
+            <span class="post-user-name">${escapeHtml(post.user_name || 'Pengguna')}</span>
+            <div class="post-meta">
+              ${post.skin_type ? `<span class="post-skin-badge">${escapeHtml(post.skin_type)}</span>` : ''}
+              <span class="post-time">${timeAgo(post.created_at)}</span>
+            </div>
+          </div>
+        </div>
+        ${post.content ? `<div class="post-content" style="font-size:16px;margin-bottom:12px">${escapeHtml(post.content)}</div>` : ''}
+        ${imageGridHtml}
+        <div class="pds-actions">
+          <button class="pds-like-btn ${post.liked_by_me ? 'liked' : ''}" id="pds-like-btn">
+            ${HEART_SVG} Suka ${post.like_count > 0 ? `<span style="font-size:12px;color:#65676b">(${post.like_count})</span>` : ''}
+          </button>
+        </div>
+      </div>
+      <div class="pds-comments" id="pds-comments-area">
+        <div class="pds-comments-title">Komentar</div>
+        <div id="pds-comment-list">
+          <div class="comment-skeleton" style="margin-bottom:10px">
+            <div class="skeleton-avatar" style="width:34px;height:34px"></div>
+            <div style="flex:1">
+              <div class="skeleton-line" style="width:50%;height:11px"></div>
+              <div class="skeleton-line" style="width:80%;height:10px;margin-top:5px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="pds-input-bar">
+      <div class="comment-avatar-sm">${avatarInitial(myName)}</div>
+      <div class="pds-input-wrap">
+        <input class="pds-input" id="pds-comment-input" type="text" placeholder="Tulis komentar…" maxlength="500" />
+        <button class="pds-send-btn" id="pds-send-btn">${SEND_SVG}</button>
+      </div>
+    </div>
+  `;
+
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+
+  // Close
+  const closeSheet = () => overlay.remove();
+  sheet.querySelector('#pds-close-btn').addEventListener('click', closeSheet);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeSheet(); });
+
+  // Image lightbox
+  sheet.querySelectorAll('.post-image-thumb').forEach(thumb => {
+    thumb.addEventListener('click', () => openLightbox(images, parseInt(thumb.dataset.imgIdx) || 0));
+  });
+
+  // Like inside sheet
+  const likeBtn = sheet.querySelector('#pds-like-btn');
+  likeBtn?.addEventListener('click', async () => {
+    const wasLiked = likeBtn.classList.contains('liked');
+    likeBtn.classList.toggle('liked');
+    try {
+      const r = await apiToggleLike(post.id);
+      if (r.liked) likeBtn.classList.add('liked'); else likeBtn.classList.remove('liked');
+      // Sync feed card
+      const feedCard = document.querySelector(`[data-post-id="${post.id}"] .like-btn`);
+      if (feedCard) {
+        if (r.liked) feedCard.classList.add('liked'); else feedCard.classList.remove('liked');
+        const countEl = feedCard.querySelector('.like-count');
+        if (countEl) countEl.textContent = r.like_count || '';
+      }
+    } catch { likeBtn.classList.toggle('liked'); }
+  });
+
+  // Load comments
+  const commentListEl = sheet.querySelector('#pds-comment-list');
+  (async () => {
+    try {
+      const data = await apiFetchComments(post.id);
+      commentListEl.innerHTML = '';
+      if (!data.comments || data.comments.length === 0) {
+        commentListEl.innerHTML = '<div class="pds-comments-empty">Belum ada komentar</div>';
+      } else {
+        data.comments.forEach(c => {
+          const item = document.createElement('div');
+          item.className = 'pds-comment-item';
+          item.innerHTML = `
+            <div class="comment-avatar-sm">${avatarInitial(c.user_name)}</div>
+            <div>
+              <div class="pds-comment-bubble">
+                <div class="pds-comment-name">${escapeHtml(c.user_name || 'Pengguna')}</div>
+                <div class="pds-comment-text">${escapeHtml(c.content)}</div>
+              </div>
+              <div class="pds-comment-time">${timeAgo(c.created_at)}</div>
+            </div>
+          `;
+          commentListEl.appendChild(item);
+        });
+        // Scroll to last comment
+        setTimeout(() => {
+          const body = sheet.querySelector('#pds-body');
+          body.scrollTop = body.scrollHeight;
+        }, 100);
+      }
+    } catch {
+      commentListEl.innerHTML = '<div class="pds-comments-empty">Gagal memuat komentar</div>';
+    }
+  })();
+
+  // Send comment
+  const input = sheet.querySelector('#pds-comment-input');
+  const sendBtn = sheet.querySelector('#pds-send-btn');
+  let _sending = false;
+
+  input.addEventListener('input', () => sendBtn.classList.toggle('active', input.value.trim().length > 0));
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
+  sendBtn.addEventListener('click', doSend);
+
+  async function doSend() {
+    const text = input.value.trim();
+    if (!text || _sending) return;
+    _sending = true;
+    input.value = '';
+    sendBtn.classList.remove('active');
+    try {
+      const c = await apiAddComment(post.id, text);
+      commentListEl.querySelector('.pds-comments-empty')?.remove();
+      const item = document.createElement('div');
+      item.className = 'pds-comment-item';
+      item.innerHTML = `
+        <div class="comment-avatar-sm">${avatarInitial(c.user_name)}</div>
+        <div>
+          <div class="pds-comment-bubble">
+            <div class="pds-comment-name">${escapeHtml(c.user_name || 'Saya')}</div>
+            <div class="pds-comment-text">${escapeHtml(c.content)}</div>
+          </div>
+          <div class="pds-comment-time">Baru saja</div>
+        </div>
+      `;
+      commentListEl.appendChild(item);
+      const body = sheet.querySelector('#pds-body');
+      setTimeout(() => { body.scrollTop = body.scrollHeight; }, 60);
+
+      // Sync comment count on feed card
+      const countEl = document.querySelector(`[data-post-id="${post.id}"] .comment-count-label`);
+      if (countEl) countEl.textContent = parseInt(countEl.textContent || 0) + 1;
+    } catch (err) {
+      alert(err.message);
+      input.value = text;
+    } finally {
+      _sending = false;
+    }
+  }
+
+  // Focus input
+  setTimeout(() => input.focus(), 400);
+}
 
 function renderSkeletons(count = 3) {
   return Array.from({ length: count }).map(() => {
@@ -440,6 +620,15 @@ function renderPostCard(post) {
       setTimeout(() => document.addEventListener('click', () => popup.remove(), { once: true }), 0);
     });
   }
+
+  // Click on post content/header to open detail
+  const clickTargets = [card.querySelector('.post-header'), card.querySelector('.post-content')];
+  clickTargets.forEach(el => {
+    if (el) el.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('[data-action]')) return;
+      openPostDetail(post);
+    });
+  });
 
   wrapper.appendChild(card);
   wrapper.appendChild(buildCommentSection(post.id, commentCount));
